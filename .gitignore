@@ -1,0 +1,28 @@
+# Virtual environments
+venv/
+.venv/
+
+bstld_yolo_format
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Models
+*.pt
+
+# Logs
+runs/
+new/
+
+logs/
+
+# Environment variables
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
