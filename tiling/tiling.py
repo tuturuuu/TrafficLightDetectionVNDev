@@ -7,7 +7,7 @@ from tqdm import tqdm
 # ========== CONFIG ==========
 dataset_path = "/home/vietpham/dataset/dataset/"
 splits = ["train", "val", "test"]
-tile_size = 740
+tile_size = 640
 overlap = 0.2
 min_visibility = 0.3
 # ============================

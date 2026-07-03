@@ -13,8 +13,8 @@ import torch.nn.functional as F
 
 BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_DATASET_ROOT = Path("/home/vietpham/dataset/dataset")
-DEFAULT_TILE_MODEL = BASE_DIR / "tile_proposal_cnn_model.pth"
-DEFAULT_YOLO_MODEL = BASE_DIR / "runs/detect/new/yolo26_traffic_light_dataset2_tiling3/weights/best.pt"
+DEFAULT_TILE_MODEL = BASE_DIR / "../cnn_classifier/tile_proposal_cnn_model.pth"
+DEFAULT_YOLO_MODEL = BASE_DIR / "../runs/detect/new/yolo26_traffic_light_dataset2_tiling3/weights/best.pt"
 
 IMG_SIZE = 160
 DEFAULT_TILE_SIZE = 740
@@ -87,10 +87,15 @@ def parse_args():
     parser.add_argument("--device", default=None)
     parser.add_argument("--max-images", type=int, default=0, help="Limit the number of images for a quick run")
     parser.add_argument("--agnostic-nms", action="store_true")
-    parser.add_argument("--proposal-batch-size", type=int, default=DEFAULT_PROPOSAL_BATCH_SIZE, 
-                        help="Batch size for proposal CNN inference")
+    parser.add_argument("--proposal-batch-size", type=int, default=DEFAULT_PROPOSAL_BATCH_SIZE,
+                        help="Max tiles per proposal-CNN batch. Batches never span more than one "
+                             "image's tiles; this only caps how many of that one image's tiles "
+                             "are scored in a single forward pass (raise it if you want every "
+                             "image's tiles scored in one shot regardless of tile count).")
     parser.add_argument("--yolo-batch-size", type=int, default=DEFAULT_YOLO_BATCH_SIZE,
-                        help="Batch size for YOLO inference")
+                        help="Max tiles per YOLO batch. Batches never span more than one image's "
+                             "kept tiles; this only caps how many of that one image's tiles are "
+                             "run through YOLO in a single forward pass.")
     return parser.parse_args()
 
 
@@ -286,7 +291,7 @@ def yolo_predictions_batched(
     yolo_conf,
     imgsz,
     device,
-    batch_size=32,
+    batch_size=6,
 ):
     """
     Returns:
@@ -336,59 +341,6 @@ def yolo_predictions_batched(
             per_tile_detections.append(tile_dets)
 
     return per_tile_detections
-    """
-    Run YOLO on tiles with batching.
-    
-    Args:
-        yolo_model: YOLO model
-        tile_images: List of tile images
-        tile_metadata: List of dicts with 'x' and 'y' offsets
-        yolo_conf: confidence threshold
-        imgsz: image size for YOLO
-        device: device for YOLO
-        batch_size: batch size for YOLO inference
-    
-    Returns:
-        List of detections with global coordinates
-    """
-    if not tile_images:
-        return []
-    
-    all_detections = []
-    
-    for i in range(0, len(tile_images), batch_size):
-        batch_tiles = tile_images[i:i + batch_size]
-        batch_metadata = tile_metadata[i:i + batch_size]
-        
-        results = yolo_model.predict(
-            source=batch_tiles,
-            conf=yolo_conf,
-            imgsz=imgsz,
-            verbose=False,
-            device=device,
-        )
-        
-        for tile_meta, result in zip(batch_metadata, results):
-            if result.boxes is None or len(result.boxes) == 0:
-                continue
-            
-            boxes = result.boxes.xyxy.cpu().numpy()
-            confs = result.boxes.conf.cpu().numpy()
-            classes = result.boxes.cls.cpu().numpy()
-            
-            for box, conf, cls in zip(boxes, confs, classes):
-                all_detections.append({
-                    "box": np.array([
-                        box[0] + tile_meta["x"],
-                        box[1] + tile_meta["y"],
-                        box[2] + tile_meta["x"],
-                        box[3] + tile_meta["y"],
-                    ], dtype=np.float32),
-                    "conf": float(conf),
-                    "cls": int(cls),
-                })
-    
-    return all_detections
 
 
 def box_iou(box, boxes):
@@ -629,8 +581,8 @@ def main():
                                         args.yolo_conf, args.imgsz, ultra_device, args.yolo_batch_size)
 
     print(f"\nProcessing {len(images)} images...")
-    print(f"Proposal batch size: {args.proposal_batch_size}")
-    print(f"YOLO batch size: {args.yolo_batch_size}")
+    print(f"Proposal batch cap (per image): {args.proposal_batch_size}")
+    print(f"YOLO batch cap (per image): {args.yolo_batch_size}")
     print(f"Tile threshold: {args.tile_threshold}\n")
 
     # Timing counters
@@ -678,72 +630,79 @@ def main():
         total_tiles += len(tiles)
     time_tiling += time.perf_counter() - t0
 
-    # Phase 2: Score ALL tiles with proposal CNN in large batches
-    print(f"Phase 2: Scoring {total_tiles} tiles with proposal CNN...")
-    
-    all_tile_images = []
-    tile_to_image_idx = []
-    tile_to_tile_idx = []
-    
-    for img_idx, img_data in enumerate(all_image_data):
-        if img_data is None:
-            continue
-        for tile_idx, tile in enumerate(img_data["tiles"]):
-            all_tile_images.append(tile["image"])
-            tile_to_image_idx.append(img_idx)
-            tile_to_tile_idx.append(tile_idx)
-    
+    # Phase 2: Score tiles with proposal CNN, ONE IMAGE AT A TIME.
+    # Each image's own tiles (X of them) are run together as a single batch,
+    # mirroring real-world deployment where one image arrives, gets cut into
+    # X tiles, and those X tiles are the only thing the model sees in that
+    # forward pass. Tiles from different images are never combined into the
+    # same batch. If a single image produces more tiles than
+    # --proposal-batch-size, it is split into multiple batches, but those
+    # batches still only ever contain tiles from that one image.
+    print(f"Phase 2: Scoring {total_tiles} tiles with proposal CNN (one image's tiles per batch)...")
+
     t0 = time.perf_counter()
-    all_scores = tile_model_scores_batched(tile_model, all_tile_images, device, args.proposal_batch_size)
-    time_proposal += time.perf_counter() - t0
-    
-    # Distribute scores back to images and filter
-    score_idx = 0
     for img_data in all_image_data:
         if img_data is None:
             continue
-        num_tiles = len(img_data["tiles"])
-        img_scores = all_scores[score_idx:score_idx + num_tiles]
-        score_idx += num_tiles
-        
-        kept_tiles = [tile for tile, score in zip(img_data["tiles"], img_scores) 
+
+        tile_images = [tile["image"] for tile in img_data["tiles"]]
+
+        # batch_size = number of tiles this image produced (capped only to
+        # avoid OOM on pathological images with an unusually large tile count)
+        per_image_batch_size = min(len(tile_images), args.proposal_batch_size) if tile_images else 1
+
+        img_scores = tile_model_scores_batched(tile_model, tile_images, device, per_image_batch_size)
+
+        kept_tiles = [tile for tile, score in zip(img_data["tiles"], img_scores)
                       if score > args.tile_threshold]
         img_data["kept_tiles"] = kept_tiles
         total_kept_tiles += len(kept_tiles)
         if kept_tiles:
             total_images_with_kept_tiles += 1
+    time_proposal += time.perf_counter() - t0
 
-    # Phase 3: Run YOLO on kept tiles in large batches
-    print(f"Phase 3: Running YOLO on {total_kept_tiles} kept tiles...")
-    
-    all_kept_tile_images = []
-    all_kept_tile_metadata = []
-    kept_tile_to_image_idx = []
-    
+    # Phase 3: Run YOLO on kept tiles, ONE IMAGE AT A TIME.
+    # Same principle as Phase 2: only the kept tiles that came from a single
+    # image are ever batched together for YOLO inference. This means the
+    # detector never sees a mix of tiles from two different images in one
+    # forward pass, matching real-world streaming inference.
+    print(f"Phase 3: Running YOLO on {total_kept_tiles} kept tiles (one image's tiles per batch)...")
+
+    detections_by_image = {}
+
+    t0 = time.perf_counter()
     for img_idx, img_data in enumerate(all_image_data):
         if img_data is None:
+            detections_by_image[img_idx] = []
             continue
-        for tile in img_data["kept_tiles"]:
-            all_kept_tile_images.append(tile["image"])
-            all_kept_tile_metadata.append({"x": tile["x"], "y": tile["y"]})
-            kept_tile_to_image_idx.append(img_idx)
-    
-    t0 = time.perf_counter()
-    per_tile_detections = yolo_predictions_batched(
-        yolo_model, 
-        all_kept_tile_images, 
-        all_kept_tile_metadata,
-        args.yolo_conf, 
-        args.imgsz, 
-        ultra_device, 
-        args.yolo_batch_size
-    )
+
+        kept_tiles = img_data["kept_tiles"]
+        if not kept_tiles:
+            detections_by_image[img_idx] = []
+            continue
+
+        tile_images = [tile["image"] for tile in kept_tiles]
+        tile_metadata = [{"x": tile["x"], "y": tile["y"]} for tile in kept_tiles]
+
+        # batch_size = number of kept tiles this image produced (capped only
+        # to avoid OOM on pathological images with an unusually large count)
+        per_image_batch_size = min(len(tile_images), args.yolo_batch_size)
+
+        per_tile_detections = yolo_predictions_batched(
+            yolo_model,
+            tile_images,
+            tile_metadata,
+            args.yolo_conf,
+            args.imgsz,
+            ultra_device,
+            per_image_batch_size,
+        )
+
+        image_detections = []
+        for tile_dets in per_tile_detections:
+            image_detections.extend(tile_dets)
+        detections_by_image[img_idx] = image_detections
     time_yolo += time.perf_counter() - t0
-    
-    # Group detections by image
-    detections_by_image = {i: [] for i in range(len(all_image_data))}
-    for tile_dets, img_idx in zip(per_tile_detections, kept_tile_to_image_idx):
-        detections_by_image[img_idx].extend(tile_dets)
 
     # Phase 4: NMS and ground truth loading per image
     print("Phase 4: NMS and evaluation...")

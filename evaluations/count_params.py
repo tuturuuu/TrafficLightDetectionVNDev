@@ -2,13 +2,16 @@
 """Count parameters for a YOLO .pt model and a PyTorch .pth checkpoint."""
 
 import argparse
+import sys
 from pathlib import Path
 
 import torch
 
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
 DEFAULT_PT_MODEL = BASE_DIR / "yolo11m.pt"
-DEFAULT_PTH_MODEL = BASE_DIR / "tile_proposal_cnn_model.pth"
+DEFAULT_PTH_MODEL = BASE_DIR / "cnn_classifier/tile_proposal_cnn_model.pth"
 
 
 def register_custom_modules():
@@ -79,7 +82,13 @@ def load_checkpoint(path, device):
 
 
 def load_pth_model(model_path, device):
-    from evaluation import TileProposalCNN
+    try:
+        from evaluations.evaluation_with_cnn import TileProposalCNN
+    except ImportError:
+        try:
+            from cnn_classifier.small_cnn_tile_classifier import TileProposalCNN
+        except ImportError:
+            from cnn_classifier.small_cnn import TileProposalCNN
 
     model = TileProposalCNN().to(device)
     state_dict = load_checkpoint(model_path, device)

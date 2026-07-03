@@ -78,8 +78,8 @@ def load_image(path, img_size=IMG_SIZE):
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--image", required=True, help="Path to .jpg image to run")
-    p.add_argument("--model", default="tile_proposal_cnn_model.pth", help="Path to model .pth file")
+    p.add_argument("--image", required=True, help="Path to a .jpg image file to run")
+    p.add_argument("--model", default="cnn_classifier/tile_proposal_cnn_model.pth", help="Path to model .pth file")
     p.add_argument("--threshold", type=float, default=0.5)
     p.add_argument("--device", default=None, help="cpu or cuda (auto if omitted)")
 
@@ -90,6 +90,10 @@ def main():
 
     if not os.path.exists(args.image):
         print(f"Image not found: {args.image}")
+        return
+
+    if os.path.isdir(args.image):
+        print(f"Image path is a directory, not a file: {args.image}")
         return
 
     if not os.path.exists(args.model):

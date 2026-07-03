@@ -8,8 +8,8 @@ from pathlib import Path
 
 
 BASE_DIR = Path(__file__).resolve().parent
-EVAL_1 = BASE_DIR / "evaluation.py"
-EVAL_2 = BASE_DIR / "evaluation_2.py"
+EVAL_1 = BASE_DIR / "evaluation_with_cnn.py"
+EVAL_2 = BASE_DIR / "evaluation_without_cnn.py"
 
 
 SUMMARY_PATTERNS = {
@@ -31,8 +31,8 @@ SUMMARY_PATTERNS = {
 def parse_args():
     parser = argparse.ArgumentParser(description="Run both evaluation scripts and compare their results")
     parser.add_argument("--dataset-root", default="/home/vietpham/dataset/dataset")
-    parser.add_argument("--yolo-model", default=str(BASE_DIR / "runs/detect/new/yolo26_traffic_light_dataset2_tiling3/weights/best.pt"))
-    parser.add_argument("--tile-model", default=str(BASE_DIR / "tile_proposal_cnn_model.pth"))
+    parser.add_argument("--yolo-model", default=str(BASE_DIR / "../runs/detect/new/yolo26_traffic_light_dataset2_tiling3/weights/best.pt"))
+    parser.add_argument("--tile-model", default=str(BASE_DIR / "../cnn_classifier/tile_proposal_cnn_model.pth"))
     parser.add_argument("--tile-size", type=int, default=740)
     parser.add_argument("--overlap", type=float, default=0.2)
     parser.add_argument("--yolo-conf", type=float, default=0.25)

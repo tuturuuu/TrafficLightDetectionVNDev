@@ -38,10 +38,12 @@ class TileDataset(Dataset):
     def __init__(
         self,
         image_paths,
+        label_dir,
         augment=False
     ):
 
         self.image_paths = image_paths
+        self.label_dir = label_dir
         self.augment = augment
 
     def __len__(self):
@@ -80,7 +82,7 @@ class TileDataset(Dataset):
         stem = os.path.splitext(filename)[0]
 
         label_path = os.path.join(
-            LABEL_DIR,
+            self.label_dir,
             stem + ".txt"
         )
 
@@ -230,6 +232,9 @@ all_images = glob(
     )
 )
 
+if len(all_images) == 0:
+    raise RuntimeError(f"No training images found in {IMAGE_DIR}")
+
 groups = defaultdict(list)
 
 for path in all_images:
@@ -244,28 +249,51 @@ for path in all_images:
 
 base_images = list(groups.keys())
 
-train_bases, test_bases = train_test_split(
-    base_images,
-    test_size=0.2,
-    random_state=42
+TEST_BASE_DIR = "/home/vietpham/dataset/dataset/test_tiled"
+TEST_IMAGE_DIR = os.path.join(TEST_BASE_DIR, "images")
+TEST_LABEL_DIR = os.path.join(TEST_BASE_DIR, "labels")
+
+test_images = glob(
+    os.path.join(
+        TEST_IMAGE_DIR,
+        "*.jpg"
+    )
 )
 
+if len(test_images) == 0:
+    raise RuntimeError(f"No test images found in {TEST_IMAGE_DIR}")
+
+test_bases = {
+    os.path.splitext(os.path.basename(path))[0].rsplit("_tile", 1)[0]
+    for path in test_images
+}
+
+train_bases = [
+    b for b in base_images
+    if b not in test_bases
+]
+
 train_imgs = []
-test_imgs = []
 
 for b in train_bases:
     train_imgs.extend(groups[b])
 
-for b in test_bases:
-    test_imgs.extend(groups[b])
+test_imgs = test_images
+
+if len(train_imgs) == 0:
+    raise RuntimeError("train_imgs is empty after excluding test_bases")
+
+print(f"Train images: {len(train_imgs)} | Test images: {len(test_imgs)}")
 
 train_ds = TileDataset(
     train_imgs,
+    label_dir=LABEL_DIR,
     augment=True
 )
 
 test_ds = TileDataset(
     test_imgs,
+    label_dir=TEST_LABEL_DIR,
     augment=False
 )
 

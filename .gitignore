@@ -4,6 +4,8 @@ venv/
 
 bstld_yolo_format
 
+*.out
+
 # Python cache
 __pycache__/
 *.py[cod]

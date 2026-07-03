@@ -13,10 +13,15 @@ import os
 import cv2
 import random
 import matplotlib.pyplot as plt
+import sys
+from pathlib import Path
+
 # 🔴 MUST COME FIRST
 # ===== CBAM REGISTRATION (REQUIRED) =====
 import ultralytics.nn.tasks as tasks
-from custom_modules import CBAM
+sys.path.insert(0, '/home/vietpham/projects/yolo11m_for_label1')
+
+from utils.custom_modules import CBAM
 
 # 🔥 THIS is what parse_model() uses
 tasks.CBAM = CBAM
@@ -96,7 +101,7 @@ names:
 print(open(yaml_path).read())
 
 # Choose model size: yolov8n (nano), yolov8s (small), yolov8m (medium), yolov8l (large)
-model = YOLO('runs/yolov8m_dataset2_adaptive_tiling_cbam6/weights/last.pt')  # start from pretrained COCO weights
+model = YOLO('/home/vietpham/projects/yolo11m_for_label1/runs/detect/runs/yolov8m_dataset2_tiling_cbam/weights/last.pt')  # start from pretrained COCO weights
 # model = YOLO('/content/drive/MyDrive/Applied ML/Lab/runs/traffic_light_yolo_tiling2/weights/best.pt')
 model.info()
 
@@ -121,8 +126,8 @@ model.train(
     data=yaml_path,
     epochs=600,             # increase if you have GPU time
     imgsz=640,             # image size (can change to 416 or 1280)
-    batch=32,
-    name='yolov8m_dataset2_adaptive_tiling_cbam',
+    batch=16,
+    name='yolov8m_dataset2_fixed_tiling_cbam',
     project='./runs',  # where to save results
     device=[1],# use GPU if available
     verbose=False,
@@ -130,7 +135,7 @@ model.train(
 )
 
 # Evaluate on validation set
-metrics = model.val('runs/yolo11m_dataset2_adaptive_tiling_cbam/weights/best.pt')
+metrics = model.val('runs/yolov8m_dataset2_tiling_cbam/weights/best.pt')
 print(metrics)
 
 # Visualize predictions

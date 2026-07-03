@@ -10,7 +10,7 @@ import torch
 
 BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_DATASET_ROOT = Path("/home/vietpham/dataset/dataset")
-DEFAULT_YOLO_MODEL = BASE_DIR / "runs/detect/new/yolo26_traffic_light_dataset2_tiling3/weights/best.pt"
+DEFAULT_YOLO_MODEL = BASE_DIR / "/home/vietpham/projects/yolo11m_for_label1/runs/detect/runs/yolov8m_dataset2_tiling_cbam/weights/best.pt"
 
 DEFAULT_TILE_SIZE = 740
 DEFAULT_OVERLAP = 0.2
@@ -18,6 +18,16 @@ DEFAULT_YOLO_CONF = 0.25
 DEFAULT_NMS_IOU = 0.5
 EVAL_IOUV = np.linspace(0.5, 0.95, 10)
 
+from pathlib import Path
+
+import ultralytics.nn.tasks as tasks
+import sys
+
+sys.path.insert(0, '/home/vietpham/projects/yolo11m_for_label1')
+
+from utils.custom_modules import CBAM
+
+tasks.CBAM = CBAM
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Tiled YOLO evaluation without proposal filtering")
@@ -420,7 +430,7 @@ def main():
 
     image_count = len(all_predictions)
     tile_fps = total_detections_tiles / total_time if total_time > 0 else 0.0
-    real_fps = image_count / total_time if total_time > 0 else 0.0
+    real_fps = image_count / (total_time - time_gt - time_io) if total_time > 0 else 0.0
 
     print(f"\n===== TIME BREAKDOWN =====")
     print(f"I/O (imread):        {time_io:7.2f}s ({time_io/total_time*100:5.1f}%)")
