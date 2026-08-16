@@ -1,0 +1,50 @@
+# Thay đổi đường dẫn này trỏ tới thư mục sds_dataset trên server của bạn
+path: /home/anhld/lab_model/TrafficLightDetectionVNDev/sds_dataset/compressed
+train: images/train  # Đường dẫn tương đối từ path
+val: images/val      # Đường dẫn tương đối từ path
+test: images/test    # Tập test
+
+# Thay đổi danh sách names theo đúng ID class của SeaDroneSee Dataset
+names:
+  0: ignored
+  1: swimmer
+  2: boat
+  3: jetski
+  4: life_saving_appliances
+  5: buoy
+
+# Danh sách các metadata/telemetry features từ train_images_metadata.csv
+# Mặc định các mô hình như YOLO sẽ chỉ dùng ảnh làm input, nhưng bạn có thể dùng 
+# các features này nếu xây dựng mô hình kết hợp (multimodal).
+metadata_features:
+  - file_name
+  - height
+  - width
+  - date_time
+  - frame
+  - drone
+  - folder_name
+  - video
+  - frame_no
+  - image_name
+  - datetime(utc)
+  - latitude
+  - longitude
+  - height_above_takeoff(meter)
+  - speed(m/s)
+  - xspeed(m/s)
+  - yspeed(m/s)
+  - zspeed(m/s)
+  - compass_heading(degrees)
+  - gimbal_heading(degrees)
+  - gimbal_pitch(degrees)
+  - gps_latitude_ref
+  - gps_longitude_ref
+  - altitude
+  - gimbal_pitch
+  - speed
+  - xspeed
+  - yspeed
+  - zspeed
+  - gps_latitude
+  - gps_longitude

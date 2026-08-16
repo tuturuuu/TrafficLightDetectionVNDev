@@ -5,11 +5,20 @@ from tqdm import tqdm
 
 
 # ========== CONFIG ==========
-dataset_path = "/home/vietpham/dataset/dataset/"
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--dataset_path', type=str, default="./sds_dataset/compressed", help="Path to the dataset")
+parser.add_argument('--tile_size', type=int, default=640, help="Tile size")
+parser.add_argument('--overlap', type=float, default=0.2, help="Overlap ratio")
+parser.add_argument('--min_visibility', type=float, default=0.3, help="Minimum visibility")
+args = parser.parse_args()
+
+dataset_path = args.dataset_path
 splits = ["train", "val", "test"]
-tile_size = 740
-overlap = 0.2
-min_visibility = 0.3
+tile_size = args.tile_size
+overlap = args.overlap
+min_visibility = args.min_visibility
 # ============================
 
 def tile_image_and_labels(
@@ -101,10 +110,15 @@ def tile_image_and_labels(
 
 # ========== RUN TILING ==========
 for split in splits:
-    img_dir     = os.path.join(dataset_path, f"{split}/images")
-    lbl_dir     = os.path.join(dataset_path, f"{split}/labels")
-    out_img_dir = os.path.join(dataset_path, f"{split}_tiled/images")
-    out_lbl_dir = os.path.join(dataset_path, f"{split}_tiled/labels")
+    img_dir     = os.path.join(dataset_path, f"images/{split}")
+    lbl_dir     = os.path.join(dataset_path, f"labels/{split}")
+    out_img_dir = os.path.join(dataset_path, f"images_tiled/{split}")
+    out_lbl_dir = os.path.join(dataset_path, f"labels_tiled/{split}")
+    
+    if not os.path.exists(img_dir):
+        print(f"⏩ Không tìm thấy thư mục {img_dir}, bỏ qua split {split}...")
+        continue
+        
     os.makedirs(out_img_dir, exist_ok=True)
     os.makedirs(out_lbl_dir, exist_ok=True)
 
