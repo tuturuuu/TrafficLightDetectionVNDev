@@ -208,10 +208,20 @@ def evaluate_accuracy(all_preds, all_gts, iou_thr=0.5):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def run(args):
-    from ultralytics import YOLO
     import sys
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    repo_dir = os.path.dirname(os.path.abspath(__file__))
+    utils_dir = os.path.join(repo_dir, "utils")
+    for path in (repo_dir, utils_dir):
+        if path not in sys.path:
+            sys.path.insert(0, path)
+
+    from ultralytics import YOLO
+    import ultralytics.nn.tasks as tasks
+    from custom_modules import CBAM, SE
     from grid_proposal_net import GridProposalNet
+
+    tasks.CBAM = CBAM
+    tasks.SE = SE
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = YOLO(args.model)

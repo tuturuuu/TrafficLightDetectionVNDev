@@ -1,15 +1,16 @@
 import os
 import cv2
+import argparse
 from pathlib import Path
 from tqdm import tqdm
 
 
-# ========== CONFIG ==========
-dataset_path = "/home/vietpham/dataset/dataset/"
-splits = ["train", "val", "test"]
+dataset_path = "/home/anhld/AdaptiveTiling/TrafficLightDetectionVNDev/data/SeaDroneSees_70_15_15/data.yaml"
+splits = ["train", "val"]
 tile_size = 640
 overlap = 0.2
 min_visibility = 0.3
+output_suffix = "_tiled_uniform"
 # ============================
 
 def tile_image_and_labels(
@@ -99,27 +100,68 @@ def tile_image_and_labels(
             tile_id += 1
 
 
-# ========== RUN TILING ==========
-for split in splits:
-    img_dir     = os.path.join(dataset_path, f"{split}/images")
-    lbl_dir     = os.path.join(dataset_path, f"{split}/labels")
-    out_img_dir = os.path.join(dataset_path, f"{split}_tiled/images")
-    out_lbl_dir = os.path.join(dataset_path, f"{split}_tiled/labels")
-    os.makedirs(out_img_dir, exist_ok=True)
-    os.makedirs(out_lbl_dir, exist_ok=True)
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset-path", default=dataset_path)
+    parser.add_argument("--splits", nargs="+", default=splits)
+    parser.add_argument("--tile-size", type=int, default=tile_size)
+    parser.add_argument("--overlap", type=float, default=overlap)
+    parser.add_argument("--min-visibility", type=float, default=min_visibility)
+    parser.add_argument(
+        "--output-suffix",
+        default=output_suffix,
+        help="Output folders are named {split}{output_suffix}/images|labels.",
+    )
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Allow writing into non-empty output directories.",
+    )
+    return parser.parse_args()
 
-    image_files = [
-        f for f in os.listdir(img_dir)
-        if f.lower().endswith((".jpg", ".png", ".jpeg"))
-    ]
-    print(f"\n📸 Tiling {len(image_files)} {split} images...")
 
-    for f in tqdm(image_files):
-        img_path = os.path.join(img_dir, f)
-        lbl_path = os.path.join(lbl_dir, Path(f).stem + ".txt")
-        tile_image_and_labels(
-            img_path, lbl_path, out_img_dir, out_lbl_dir,
-            tile_size, overlap, min_visibility
-        )
+def main():
+    args = parse_args()
 
-print("✅ Done! Tiled dataset ready.")
+    for split in args.splits:
+        img_dir = os.path.join(args.dataset_path, "images", split)
+        lbl_dir = os.path.join(args.dataset_path, "labels", split)
+        out_img_dir = os.path.join(args.dataset_path, f"{split}{args.output_suffix}", "images")
+        out_lbl_dir = os.path.join(args.dataset_path, f"{split}{args.output_suffix}", "labels")
+
+        if not os.path.isdir(img_dir):
+            raise FileNotFoundError(f"Image directory not found: {img_dir}")
+        if not os.path.isdir(lbl_dir):
+            raise FileNotFoundError(f"Label directory not found: {lbl_dir}")
+
+        for out_dir in (out_img_dir, out_lbl_dir):
+            if os.path.isdir(out_dir) and os.listdir(out_dir) and not args.overwrite:
+                raise RuntimeError(
+                    f"Output directory is not empty: {out_dir}\n"
+                    "Use a different --output-suffix or pass --overwrite explicitly."
+                )
+
+        os.makedirs(out_img_dir, exist_ok=True)
+        os.makedirs(out_lbl_dir, exist_ok=True)
+
+        image_files = [
+            f for f in os.listdir(img_dir)
+            if f.lower().endswith((".jpg", ".png", ".jpeg"))
+        ]
+        print(f"\n📸 Tiling {len(image_files)} {split} images...")
+        print(f"   images -> {out_img_dir}")
+        print(f"   labels -> {out_lbl_dir}")
+
+        for f in tqdm(image_files):
+            img_path = os.path.join(img_dir, f)
+            lbl_path = os.path.join(lbl_dir, Path(f).stem + ".txt")
+            tile_image_and_labels(
+                img_path, lbl_path, out_img_dir, out_lbl_dir,
+                args.tile_size, args.overlap, args.min_visibility
+            )
+
+    print("✅ Done! Tiled dataset ready.")
+
+
+if __name__ == "__main__":
+    main()

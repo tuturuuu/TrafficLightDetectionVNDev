@@ -1,7 +1,7 @@
 # YOLO11m with CBAM attention
 # Model: 640x640, depth=0.67, width=0.75 (mid-size)
 
-nc: 79  # number of classes
+nc: 5  # number of classes
 
 scales:
   m: [0.67, 0.75, 1024]
