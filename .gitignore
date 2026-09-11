@@ -30,3 +30,11 @@ logs/
 Thumbs.db
 
 data/
+
+#ignoree benchmarks
+benchmarks
+benchmark_results_pw8_thr0.03/
+benchmark_results_pw8_thr0.05/
+benchmark_results_pw8_thr0.08/
+benchmark_results_pw8_thr0.10/
+bosch/

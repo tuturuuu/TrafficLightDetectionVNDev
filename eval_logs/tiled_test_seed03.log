@@ -1,0 +1,21 @@
+
+===== TIME BREAKDOWN =====
+I/O (imread):          56.34s ( 12.9%)
+Tiling:                 0.08s (  0.0%)
+Proposal CNN:           0.00s (  0.0%)
+YOLO inference:       324.24s ( 74.0%)
+NMS:                    0.49s (  0.1%)
+Ground truth load:     57.02s ( 13.0%)
+Other/overhead:         0.01s
+
+Images processed: 1571
+Tiles generated: 52308
+Tiles kept: 52308
+Tile reduction: 0.0000
+Total time: 438.182 sec
+Tile-level FPS: 119.37
+REAL image-level FPS (with tiling): 4.84
+Precision: 0.7731
+Recall: 0.9283
+mAP50: 0.8687
+mAP50-95: 0.6033

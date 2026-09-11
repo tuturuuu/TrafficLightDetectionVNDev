@@ -1,0 +1,35 @@
+Ultralytics 8.4.32 🚀 Python-3.11.15 torch-2.9.1+cu128 CUDA:0 (NVIDIA GeForce RTX 4090, 24083MiB)
+YOLOv8_CBAM summary (fused): 130 layers, 10,202,731 parameters, 0 gradients, 81.7 GFLOPs
+[34m[1mval: [0mFast image access ✅ (ping: 0.0±0.0 ms, read: 3193.6±97.9 MB/s, size: 670.7 KB)
+
+[K[34m[1mval: [0mScanning /home/anhld/AdaptiveTiling/TrafficLightDetectionVNDev/data/SeaDroneSees_70_15_15/labels/test.cache... 1571 images, 0 backgrounds, 0 corrupt: 100% ━━━━━━━━━━━━ 1571/1571 411.8Mit/s 0.0s
+[34m[1mval: [0m/home/anhld/AdaptiveTiling/TrafficLightDetectionVNDev/data/SeaDroneSees_70_15_15/images/test/13831.jpg: 1 duplicate labels removed
+[34m[1mval: [0m/home/anhld/AdaptiveTiling/TrafficLightDetectionVNDev/data/SeaDroneSees_70_15_15/images/test/9561.jpg: 1 duplicate labels removed
+[34m[1mval: [0m/home/anhld/AdaptiveTiling/TrafficLightDetectionVNDev/data/SeaDroneSees_70_15_15/images/test/9564.jpg: 1 duplicate labels removed
+
+[K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 1% ──────────── 1/99 1.8s/it 0.5s<2:52
+[K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 2% ──────────── 2/99 1.0it/s 1.0s<1:33
+[K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 3% ──────────── 3/99 1.4it/s 1.4s<1:07
+[K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 4% ──────────── 4/99 1.9it/s 1.8s<51.1s
+[K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 5% ╸─────────── 5/99 4.3it/s 1.9s<22.1s
+[K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 6% ╸─────────── 6/99 5.9it/s 2.0s<15.8s
+[K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 7% ╸─────────── 7/99 6.8it/s 2.1s<13.6s
+[K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 8% ╸─────────── 8/99 7.6it/s 2.2s<12.0s
+[K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 9% ━─────────── 9/99 7.8it/s 2.3s<11.6s
+[K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 10% ━─────────── 10/99 8.3it/s 2.4s<10.7s
+[K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 12% ━─────────── 12/99 8.9it/s 2.6s<9.8s
+[K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 14% ━╸────────── 14/99 9.3it/s 2.8s<9.1s
+[K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 16% ━╸────────── 16/99 9.6it/s 3.0s<8.6s
+[K                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 17% ━━────────── 17/99 9.5it/s 3.1s<8.6s
+
+
+
+{'metrics/precision(B)': 0.92920466006263, 
+'metrics/recall(B)': 0.8584548157485076, 
+'metrics/mAP50(B)': 0.8947419702738417, 
+'metrics/mAP50-95(B)': 0.623568797838163, 
+'fitness': 0.623568797838163}
+{'preprocess': 0.545375687101314, 
+'inference': 2.815636348050149, 
+'loss': 0.00048529338637007637, 
+'postprocess': 0.6025043743906185}

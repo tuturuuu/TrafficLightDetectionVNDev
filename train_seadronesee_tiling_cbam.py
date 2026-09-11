@@ -13,7 +13,7 @@ from custom_modules import CBAM, SE
 tasks.CBAM = CBAM
 tasks.SE = SE
 
-SEEDS = [0, 42, 100]
+SEEDS = [100]
 
 
 def parse_args():

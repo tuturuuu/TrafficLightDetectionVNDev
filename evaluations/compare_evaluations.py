@@ -30,16 +30,20 @@ SUMMARY_PATTERNS = {
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Run both evaluation scripts and compare their results")
-    parser.add_argument("--dataset-root", default="/home/vietpham/dataset/dataset")
-    parser.add_argument("--yolo-model", default=str(BASE_DIR / "../runs/detect/new/yolo26_traffic_light_dataset2_tiling3/weights/best.pt"))
+    parser.add_argument("--dataset-root", default=str((BASE_DIR / "../data/SeaDroneSees_70_15_15").resolve()))
+    parser.add_argument("--yolo-model", default=str((BASE_DIR / "../runs/seadronesees_yolov8_cbam_tiled_default_seed03/weights/best.pt").resolve()))
     parser.add_argument("--tile-model", default=str(BASE_DIR / "../cnn_classifier/tile_proposal_cnn_model.pth"))
-    parser.add_argument("--tile-size", type=int, default=740)
+    parser.add_argument("--tile-size", type=int, default=640)
     parser.add_argument("--overlap", type=float, default=0.2)
+    parser.add_argument("--tile-threshold", type=float, default=0.5)
     parser.add_argument("--yolo-conf", type=float, default=0.25)
     parser.add_argument("--nms-iou", type=float, default=0.5)
     parser.add_argument("--imgsz", type=int, default=640)
     parser.add_argument("--device", default=None)
     parser.add_argument("--max-images", type=int, default=0)
+    parser.add_argument("--split", choices=("train", "val", "test", "all"), default="test")
+    parser.add_argument("--proposal-batch-size", type=int, default=64)
+    parser.add_argument("--yolo-batch-size", type=int, default=32)
     parser.add_argument("--agnostic-nms", action="store_true")
     parser.add_argument("--debug", action="store_true", help="Print raw script output and derived timing diagnostics")
     return parser.parse_args()
@@ -54,6 +58,7 @@ def build_common_args(args):
         "--yolo-conf", str(args.yolo_conf),
         "--nms-iou", str(args.nms_iou),
         "--imgsz", str(args.imgsz),
+        "--split", args.split,
     ]
 
     if args.device is not None:
@@ -66,10 +71,29 @@ def build_common_args(args):
     return common
 
 
+def build_with_cnn_args(args):
+    return [
+        "--tile-model", args.tile_model,
+        "--tile-threshold", str(args.tile_threshold),
+        "--proposal-batch-size", str(args.proposal_batch_size),
+        "--yolo-batch-size", str(args.yolo_batch_size),
+    ]
+
+
 def run_script(script_path, extra_args):
     command = [sys.executable, str(script_path), *extra_args]
     start_time = time.perf_counter()
-    completed = subprocess.run(command, capture_output=True, text=True, check=True)
+    try:
+        completed = subprocess.run(command, capture_output=True, text=True, check=True)
+    except subprocess.CalledProcessError as exc:
+        print(f"\nCommand failed: {' '.join(command)}", file=sys.stderr)
+        if exc.stdout:
+            print("\n===== STDOUT =====", file=sys.stderr)
+            print(exc.stdout.rstrip(), file=sys.stderr)
+        if exc.stderr:
+            print("\n===== STDERR =====", file=sys.stderr)
+            print(exc.stderr.rstrip(), file=sys.stderr)
+        raise
     wall_time = time.perf_counter() - start_time
     return completed.stdout, completed.stderr, wall_time
 
@@ -140,14 +164,14 @@ def main():
     common_args = build_common_args(args)
 
     scripts = [
-        ("evaluation.py", EVAL_1),
-        ("evaluation_2.py", EVAL_2),
+        ("with_cnn", EVAL_1, build_with_cnn_args(args)),
+        ("without_cnn", EVAL_2, []),
     ]
 
     rows = []
     script_results = []
-    for label, script_path in scripts:
-        output, stderr, wall_time = run_script(script_path, common_args)
+    for label, script_path, extra_args in scripts:
+        output, stderr, wall_time = run_script(script_path, common_args + extra_args)
         metrics = extract_metrics(output)
 
         images_processed = metrics.get("images_processed")

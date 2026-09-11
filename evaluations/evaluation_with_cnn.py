@@ -12,12 +12,12 @@ import torch.nn.functional as F
 
 
 BASE_DIR = Path(__file__).resolve().parent
-DEFAULT_DATASET_ROOT = Path("/home/vietpham/dataset/dataset")
+DEFAULT_DATASET_ROOT = (BASE_DIR / "../data/SeaDroneSees_70_15_15").resolve()
 DEFAULT_TILE_MODEL = BASE_DIR / "../cnn_classifier/tile_proposal_cnn_model.pth"
-DEFAULT_YOLO_MODEL = BASE_DIR / "../runs/detect/new/yolo26_traffic_light_dataset2_tiling3/weights/best.pt"
+DEFAULT_YOLO_MODEL = (BASE_DIR / "../runs/seadronesees_yolov8_cbam_tiled_default_seed03/weights/best.pt").resolve()
 
 IMG_SIZE = 160
-DEFAULT_TILE_SIZE = 740
+DEFAULT_TILE_SIZE = 640
 DEFAULT_OVERLAP = 0.2
 DEFAULT_TILE_THRESHOLD = 0.5
 DEFAULT_YOLO_CONF = 0.25
@@ -86,6 +86,7 @@ def parse_args():
     parser.add_argument("--imgsz", type=int, default=640)
     parser.add_argument("--device", default=None)
     parser.add_argument("--max-images", type=int, default=0, help="Limit the number of images for a quick run")
+    parser.add_argument("--split", choices=("train", "val", "test", "all"), default="test")
     parser.add_argument("--agnostic-nms", action="store_true")
     parser.add_argument("--proposal-batch-size", type=int, default=DEFAULT_PROPOSAL_BATCH_SIZE,
                         help="Max tiles per proposal-CNN batch. Batches never span more than one "
@@ -145,7 +146,20 @@ def load_tile_model(model_path, device):
     return model
 
 
+def register_custom_modules():
+    import sys
+
+    import ultralytics.nn.tasks as tasks
+
+    sys.path.insert(0, str((BASE_DIR / ".." / "utils").resolve()))
+    from custom_modules import CBAM, SE
+
+    tasks.CBAM = CBAM
+    tasks.SE = SE
+
+
 def load_yolo_model(model_path):
+    register_custom_modules()
     try:
         from ultralytics import YOLO
     except ImportError as exc:
@@ -156,16 +170,21 @@ def load_yolo_model(model_path):
     return YOLO(model_path)
 
 
-def gather_images(dataset_root):
+def gather_images(dataset_root, split):
     dataset_root = Path(dataset_root)
     image_paths = []
+    splits = ("train", "val", "test") if split == "all" else (split,)
 
-    for split in ("train", "val", "test"):
-        split_dir = dataset_root / split / "images"
-        if not split_dir.exists():
-            continue
-        for pattern in ("*.jpg", "*.jpeg", "*.png"):
-            image_paths.extend(sorted(split_dir.glob(pattern)))
+    for split_name in splits:
+        candidate_dirs = (
+            dataset_root / "images" / split_name,
+            dataset_root / split_name / "images",
+        )
+        for split_dir in candidate_dirs:
+            if not split_dir.exists():
+                continue
+            for pattern in ("*.jpg", "*.jpeg", "*.png"):
+                image_paths.extend(sorted(split_dir.glob(pattern)))
 
     return image_paths
 
@@ -417,7 +436,10 @@ def nms_detections(detections, iou_threshold=0.5, agnostic=False, max_det=300):
 
 def load_ground_truth(image_path):
     image_path = Path(image_path)
-    label_path = image_path.parent.parent / "labels" / f"{image_path.stem}.txt"
+    if image_path.parent.parent.name == "images":
+        label_path = image_path.parent.parent.parent / "labels" / image_path.parent.name / f"{image_path.stem}.txt"
+    else:
+        label_path = image_path.parent.parent / "labels" / f"{image_path.stem}.txt"
 
     if not label_path.exists():
         return []
@@ -558,12 +580,12 @@ def main():
     if not yolo_model_path.exists():
         raise FileNotFoundError(f"YOLO model not found: {yolo_model_path}")
 
-    images = gather_images(dataset_root)
+    images = gather_images(dataset_root, args.split)
     if args.max_images and args.max_images > 0:
         images = images[:args.max_images]
 
     if not images:
-        raise RuntimeError(f"No images found under {dataset_root / 'train/images'}, {dataset_root / 'val/images'}, or {dataset_root / 'test/images'}")
+        raise RuntimeError(f"No images found for split {args.split} under {dataset_root}")
 
     print(f"Loading models...")
     tile_model = load_tile_model(tile_model_path, device)
