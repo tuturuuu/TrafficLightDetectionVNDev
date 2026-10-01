@@ -32,7 +32,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Run both evaluation scripts and compare their results")
     parser.add_argument("--dataset-root", default=str((BASE_DIR / "../data/SeaDroneSees_70_15_15").resolve()))
     parser.add_argument("--yolo-model", default=str((BASE_DIR / "../runs/seadronesees_yolov8_cbam_tiled_default_seed03/weights/best.pt").resolve()))
-    parser.add_argument("--tile-model", default=str(BASE_DIR / "../cnn_classifier/tile_proposal_cnn_model.pth"))
+    parser.add_argument("--tile-model", default=str(BASE_DIR / "../weights/tile_proposal_cnn_model.pth"))
     parser.add_argument("--tile-size", type=int, default=640)
     parser.add_argument("--overlap", type=float, default=0.2)
     parser.add_argument("--tile-threshold", type=float, default=0.5)

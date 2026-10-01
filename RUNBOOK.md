@@ -6,7 +6,7 @@ python grid_proposal_net.py train \
     --images /home/vietpham/dataset/dataset/train/images \
     --labels /home/vietpham/dataset/dataset/train/labels \
     --grid-rows 8 --grid-cols 8 \
-    --epochs 40 --out grid_net.pth
+    --epochs 40 --out weights/grid_net.pth
 ```
 
 Watch two numbers per epoch:
@@ -32,8 +32,8 @@ python grid_proposal_net.py benchmark \
     --images /home/vietpham/dataset/dataset/test/images \
     --labels /home/vietpham/dataset/dataset/test/labels \
     --threshold 0.2 \
-    --benchmark-out benchmark_results \
-    --model grid_net.pth
+    --benchmark-out outputs/benchmark_results \
+    --model weights/grid_net.pth
 ```
 
 Expect ~1–3 ms/image on GPU. Over 1000 images that is 1–3 s of total
@@ -47,10 +47,10 @@ python dense_tiling_experiment.py \
     --images /home/vietpham/dataset/dataset/test/images \
     --labels /home/vietpham/dataset/dataset/test/labels \
     --model  /home/vietpham/projects/yolo11m_for_label1/runs/detect/new/yolo26_traffic_light_dataset2_tiling3/weights/best.pt  \
-    --gridnet grid_net.pth \
+    --gridnet weights/grid_net.pth \
     --tile-sizes 640 480 320 240 160 \
     --threshold 0.2 \
-    --out scaling_results.json
+    --out outputs/scaling_results.json
 ```
 
 On ~1920×1080 images with 20% overlap this gives roughly:

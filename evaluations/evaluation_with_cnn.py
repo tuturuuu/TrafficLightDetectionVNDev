@@ -13,7 +13,7 @@ import torch.nn.functional as F
 
 BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_DATASET_ROOT = (BASE_DIR / "../data/SeaDroneSees_70_15_15").resolve()
-DEFAULT_TILE_MODEL = BASE_DIR / "../cnn_classifier/tile_proposal_cnn_model.pth"
+DEFAULT_TILE_MODEL = BASE_DIR / "../weights/tile_proposal_cnn_model.pth"
 DEFAULT_YOLO_MODEL = (BASE_DIR / "../runs/seadronesees_yolov8_cbam_tiled_default_seed03/weights/best.pt").resolve()
 
 IMG_SIZE = 160

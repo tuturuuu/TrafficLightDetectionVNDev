@@ -30,10 +30,10 @@ Usage:
         --images  /path/test/images \
         --labels  /path/test/labels \
         --model   yolo26m_finetuned.pt \
-        --gridnet grid_net.pth \
+        --gridnet weights/gridnet_kayuan_8x8.pth \
         --tile-sizes 640 480 320 240 160 \
         --threshold 0.2 \
-        --out scaling_results.json
+        --out outputs/kayuan/scaling_results.json
 """
 
 import os
@@ -336,6 +336,7 @@ def run(args):
         print(f"{ts:>5} {u['tiles_per_img']:>9.1f} {dw:>+7.1f}s "
               f"{sp:>7.2f}x {dm:>+7.2f}pp {dr:>+7.2f}pp{marker}")
 
+    os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
     with open(args.out, "w") as f:
         json.dump(results, f, indent=2)
     print(f"\nSaved {args.out}")
@@ -355,5 +356,5 @@ if __name__ == "__main__":
     p.add_argument("--imgsz", type=int, default=640)
     p.add_argument("--merge-iou", type=float, default=0.5)
     p.add_argument("--max-images", type=int, default=None)
-    p.add_argument("--out", default="scaling_results.json")
+    p.add_argument("--out", default="outputs/scaling_results.json")
     run(p.parse_args())

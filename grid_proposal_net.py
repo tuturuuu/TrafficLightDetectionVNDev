@@ -19,10 +19,10 @@ needed).
 Usage (train):
     python grid_proposal_net.py train \
         --images /path/train/images --labels /path/train/labels \
-        --grid-rows 8 --grid-cols 8 --epochs 40 --out grid_net.pth
+        --grid-rows 8 --grid-cols 8 --epochs 40 --out weights/grid_net.pth
 
 Usage (inference, inside a pipeline):
-    net    = GridProposalNet.load("grid_net.pth", grid_rows=8, grid_cols=8)
+    net    = GridProposalNet.load("weights/grid_net.pth")
     keep   = net.propose(image_bgr, threshold=0.2)   # boolean (G_r, G_c) mask
 """
 
@@ -208,6 +208,8 @@ def train(args):
     n_val = max(1, int(0.1 * len(images)))
     val_imgs, train_imgs = images[:n_val], images[n_val:]
 
+    os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
+
     tr_ds = GridDataset(train_imgs, args.labels, args.grid_rows,
                         args.grid_cols, augment=True)
     va_ds = GridDataset(val_imgs, args.labels, args.grid_rows,
@@ -382,7 +384,7 @@ if __name__ == "__main__":
     pt.add_argument("--lr", type=float, default=1e-3)
     pt.add_argument("--pos-weight", type=float, default=3.0)
     pt.add_argument("--threshold", type=float, default=0.2)
-    pt.add_argument("--out", default="grid_net.pth")
+    pt.add_argument("--out", default="weights/grid_net.pth")
 
     pb = sub.add_parser("benchmark")
     pb.add_argument("--grid-rows", type=int, default=8)
@@ -390,8 +392,8 @@ if __name__ == "__main__":
     pb.add_argument("--images")
     pb.add_argument("--labels")
     pb.add_argument("--threshold", type=float, default=0.2)
-    pb.add_argument("--benchmark-out", default="benchmark_results")
-    pb.add_argument("--model", help="path to trained checkpoint (grid_net.pth)")
+    pb.add_argument("--benchmark-out", default="outputs/benchmark_results")
+    pb.add_argument("--model", help="path to trained checkpoint (e.g. weights/gridnet_kayuan_8x8.pth)")
 
 
     args = p.parse_args()

@@ -8,7 +8,7 @@ the traffic light itself vs. tile position/composition shortcuts.
 Usage:
     python gradcam_visualize.py
 
-Outputs saved to ./gradcam_out/ :
+Outputs saved to outputs/gradcam_out/ :
     <stem>_orig.jpg   - original tile (resized to IMG_SIZE for reference)
     <stem>_cam.jpg     - Grad-CAM heatmap overlay
 """
@@ -26,13 +26,13 @@ from glob import glob
 # =====================================================
 
 IMG_SIZE = 64  # change if you bumped this during retraining
-MODEL_PATH = "tile_proposal_cnn_model.pth"
+MODEL_PATH = "weights/tile_proposal_cnn_model.pth"
 
 TEST_BASE_DIR = "/home/vietpham/dataset/dataset/test_tiled"
 TEST_IMAGE_DIR = os.path.join(TEST_BASE_DIR, "images")
 TEST_LABEL_DIR = os.path.join(TEST_BASE_DIR, "labels")
 
-OUT_DIR = "./gradcam_out"
+OUT_DIR = "outputs/gradcam_out"
 NUM_SAMPLES = 12          # how many positive tiles to visualize
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
