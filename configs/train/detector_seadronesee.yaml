@@ -1,0 +1,36 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Train detector trên SeaDroneSee (70/15/15): YOLOv8m + CBAM, tile uniform 640
+#
+#   python scripts/train_detector.py configs/train/detector_seadronesee.yaml
+# ─────────────────────────────────────────────────────────────────────────────
+
+dataset:
+  name: seadronesee
+  data_yaml: data/SeaDroneSees_70_15_15/data.yaml
+
+tiling:
+  type: uniform                      # uniform | none
+  tile_size: 640
+  overlap: 0.2
+  min_visibility: 0.3
+  suffix: _tiled_uniform
+
+model:
+  arch: yolov8m                      # yolov8m | yolo26m | đường dẫn .yaml
+  attention: cbam                    # none | cbam | se
+  pretrained: null
+
+train:
+  seeds: [0, 42, 100]
+  epochs: 100
+  imgsz: 640
+  batch: 16
+  patience: 30
+  workers: 8
+  device: 0
+  deterministic: true
+  extra: {}
+
+output:
+  project: runs
+  name: seadronesees_yolov8_cbam_tiled

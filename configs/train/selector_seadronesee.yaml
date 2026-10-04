@@ -1,0 +1,30 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Train tile selector trên SeaDroneSee (70/15/15)
+#
+#   python scripts/train_selector.py configs/train/selector_seadronesee.yaml
+# ─────────────────────────────────────────────────────────────────────────────
+
+type: gridnet                        # gridnet | tile_cnn
+out: weights/gridnet_seadronesee_8x8_v2.pth
+
+gridnet:
+  images: data/SeaDroneSees_70_15_15/images/train
+  labels: data/SeaDroneSees_70_15_15/labels/train
+  grid_rows: 8
+  grid_cols: 8
+  epochs: 40
+  batch_size: 32
+  lr: 0.001
+  pos_weight: 8.0
+  threshold: 0.1
+  patience: 10
+
+tile_cnn:
+  train_images: data/SeaDroneSees_70_15_15/train_tiled_uniform/images
+  train_labels: data/SeaDroneSees_70_15_15/train_tiled_uniform/labels
+  val_images: data/SeaDroneSees_70_15_15/val_tiled_uniform/images
+  val_labels: data/SeaDroneSees_70_15_15/val_tiled_uniform/labels
+  img_size: 160
+  batch_size: 64
+  epochs: 40
+  pos_weight: 2.0

@@ -1,0 +1,28 @@
+[
+  {
+    "tile_size": 640,
+    "method": "uniform",
+    "tiles_per_img": 8.0,
+    "kept_per_img": 8.0,
+    "tile_reduction": 0.0,
+    "select_s": 0.0,
+    "detect_s": 107.5,
+    "wall_s": 107.58,
+    "mAP50": 0.9637,
+    "precision": 0.8936,
+    "recall": 0.9942
+  },
+  {
+    "tile_size": 640,
+    "method": "adaptive",
+    "tiles_per_img": 8.0,
+    "kept_per_img": 6.15,
+    "tile_reduction": 0.2312,
+    "select_s": 20.06,
+    "detect_s": 71.85,
+    "wall_s": 92.0,
+    "mAP50": 0.9637,
+    "precision": 0.894,
+    "recall": 0.9939
+  }
+]

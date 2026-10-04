@@ -28,3 +28,20 @@ logs/
 # OS files
 .DS_Store
 Thumbs.db
+
+data/
+
+#ignoree benchmarks
+benchmarks
+outputs/seadronesee/benchmark_results_pw8_thr*/
+bosch/
+
+
+# Kayuan nay nam trong data/kayuan (da bi ignore boi data/)
+label1_unzipped/
+
+eval_logs/kayuan_gridnet_val_thr010
+
+# Python package build
+*.egg-info/
+.pytest_cache/

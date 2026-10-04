@@ -1,0 +1,50 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# SeaDroneSee (split 70/15/15): uniform tiling vs GridNet ở tile 640
+#
+#   python scripts/evaluate.py configs/eval/seadronesee.yaml
+#   python scripts/evaluate.py configs/eval/seadronesee.yaml tiling.tile_size=[640,800,960]
+#
+# Kết quả cũ: outputs/seadronesee/scaling/scaling_test_seed0.json dùng threshold
+# 0.03, scaling_test_tilesize_sweep_seed0.json dùng 0.10.
+# ─────────────────────────────────────────────────────────────────────────────
+
+dataset:
+  name: seadronesee
+  images: data/SeaDroneSees_70_15_15/images/test
+  labels: data/SeaDroneSees_70_15_15/labels/test
+
+tiling:
+  type: uniform                      # uniform | none
+  tile_size: 640                     # một số hoặc danh sách để quét
+  overlap: 0.2
+  pad: false
+
+tile_selector:
+  type: [none, gridnet]              # none | tile_cnn | gridnet
+  gridnet:
+    weights: weights/gridnet_seadronesee_8x8.pth
+    threshold: 0.10
+  tile_cnn:
+    weights: weights/tile_proposal_cnn_model.pth   # chưa rõ nguồn gốc, xem weights/README.md
+    threshold: 0.5
+    batch_size: 64
+
+detector:
+  type: yolo
+  # Run "seed03" thực chất là seed 0. Seed khác: ..._seed42, ..._seed100
+  weights: runs/seadronesees_yolov8_cbam_tiled_default_seed03/weights/best.pt
+  conf: 0.25
+  imgsz: 640
+  batch: 16
+  device: null
+
+merger:
+  type: nms                          # nms | none
+  iou_thr: 0.5
+  max_det: null
+
+eval:
+  metrics: [map50, map50_95, precision, recall, fps]   # + agnostic nếu cần so với số cũ
+  n_warmup: 3
+  max_images: null
+  out: outputs/seadronesee/gridnet_scaling_seed0.json
