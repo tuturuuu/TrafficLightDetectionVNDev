@@ -1,0 +1,41 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Train detector trên Kayuan: YOLOv8m + CBAM, train trên tile uniform 640
+#
+#   python scripts/train_detector.py configs/train/detector_kayuan.yaml
+#   python scripts/train_detector.py configs/train/detector_kayuan.yaml model.arch=yolo26m model.attention=se
+#   python scripts/train_detector.py configs/train/detector_kayuan.yaml --dry-run   # chỉ in, không train
+#
+# Sau khi train xong, weight ở <output.project>/<output.name>_seed<seed>/weights/best.pt;
+# điền đường dẫn đó vào detector.weights của configs/eval/kayuan.yaml.
+# ─────────────────────────────────────────────────────────────────────────────
+
+dataset:
+  name: kayuan
+  data_yaml: data/kayuan/data.yaml   # data yaml Ultralytics của ảnh gốc (train/val/test + names)
+
+tiling:
+  type: uniform                      # uniform: train trên tile cắt sẵn | none: train trên ảnh nguyên
+  tile_size: 640
+  overlap: 0.2
+  min_visibility: 0.3                # bỏ box bị cắt còn < 30% diện tích ở mép tile
+  suffix: _tiled_uniform             # tile lưu ở <thư mục data_yaml>/<split><suffix>/; đã có thì dùng lại, chưa có thì tự cắt
+
+model:
+  arch: yolov8m                      # yolov8m | yolo26m | hoặc đường dẫn file .yaml kiến trúc
+  attention: cbam                    # none | cbam | se  (có sẵn: yolov8m+none, yolov8m+cbam, yolo26m+none, yolo26m+se)
+  pretrained: null                   # file .pt để khởi tạo trọng số (vd yolov8m.pt); null = train từ đầu
+
+train:
+  seeds: [0, 42, 100]                # mỗi seed một run
+  epochs: 100
+  imgsz: 640
+  batch: 16
+  patience: 30                       # early stop
+  workers: 8
+  device: 0                          # GPU id, vd 0, 1, "0,1" hoặc "cpu"
+  deterministic: true
+  extra: {}                          # tham số khác của Ultralytics model.train, vd {lr0: 0.005, mosaic: 0.5}
+
+output:
+  project: runs
+  name: kayuan_yolov8_cbam_tiled_v2  # run: runs/<name>_seed0, ...; tên đã có (vd kayuan_yolov8_cbam_tiled) sẽ bị từ chối

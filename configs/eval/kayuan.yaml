@@ -1,0 +1,52 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Kayuan: uniform tiling vs GridNet, quét tile size (bảng HANDOFF.md mục 3.3)
+#
+#   python scripts/evaluate.py configs/eval/kayuan.yaml
+#   python scripts/evaluate.py configs/eval/kayuan.yaml tile_selector.gridnet.threshold=0.05
+#
+# Mỗi phần bên dưới tự chứa đủ thông tin. Muốn thí nghiệm khác: copy file này
+# rồi sửa. Đường dẫn tương đối tính từ thư mục gốc repo.
+# ─────────────────────────────────────────────────────────────────────────────
+
+dataset:
+  name: kayuan                       # chỉ dùng để đặt tên output
+  images: data/kayuan/test/images
+  labels: data/kayuan/test/labels    # label YOLO, cùng tên file với ảnh
+
+tiling:
+  type: uniform                      # uniform | none (YOLO chạy trên ảnh nguyên)
+  tile_size: [640, 480, 320, 240, 160]   # một số hoặc danh sách để quét
+  overlap: 0.2
+  pad: false                         # pad tile ở mép cho đủ tile_size (chỉ có tác dụng khi tile lớn hơn cạnh ảnh)
+
+tile_selector:
+  type: [none, gridnet]              # none | tile_cnn | gridnet; danh sách = chạy lần lượt từng cái để so sánh
+  gridnet:                           # chỉ dùng khi type có gridnet
+    weights: weights/gridnet_kayuan_8x8.pth
+    threshold: 0.10                  # giữ ô có xác suất > threshold
+  tile_cnn:                          # chỉ dùng khi type có tile_cnn
+    weights: weights/tile_proposal_cnn_kayuan.pth
+    threshold: 0.5
+    batch_size: 64
+
+detector:
+  type: yolo                         # mọi biến thể YOLO (v8, v8-CBAM, 26m-SE): chỉ khác weights
+  weights: runs/kayuan_yolov8_cbam_tiled_seed0/weights/best.pt   # seed 42/100: đổi seed0 -> seed42/seed100
+  conf: 0.25
+  imgsz: 640
+  batch: 16                          # số tile mỗi lần predict
+  device: null                       # null = tự chọn; hoặc 0, 1, "cpu"
+
+merger:
+  type: nms                          # nms | none (giữ nguyên box trùng ở vùng overlap)
+  iou_thr: 0.5
+  max_det: null                      # null = không giới hạn số box mỗi ảnh
+
+eval:
+  metrics: [map50, map50_95, precision, recall, fps]
+  # map50, map50_95, precision, recall: XÉT CLASS
+  # agnostic: thêm số theo cách cũ của legacy/dense_tiling_experiment.py (không xét class)
+  # fps: số ảnh / wall time
+  n_warmup: 3                        # số ảnh chạy trước, không tính giờ
+  max_images: null                   # vd 50 để chạy thử nhanh
+  out: outputs/kayuan/gridnet_scaling_seed0.json   # kèm file .yaml ghi lại config đã chạy

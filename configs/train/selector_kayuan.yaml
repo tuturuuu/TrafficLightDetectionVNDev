@@ -1,0 +1,33 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Train tile selector trên Kayuan
+#
+#   python scripts/train_selector.py configs/train/selector_kayuan.yaml
+#   python scripts/train_selector.py configs/train/selector_kayuan.yaml type=tile_cnn out=weights/tile_cnn_kayuan_v2.pth
+#
+# Sau khi train, điền `out` vào tile_selector.<type>.weights của configs/eval/kayuan.yaml.
+# ─────────────────────────────────────────────────────────────────────────────
+
+type: gridnet                        # gridnet | tile_cnn
+out: weights/gridnet_kayuan_8x8_v2.pth   # script không ghi đè file có sẵn (trừ khi --overwrite)
+
+gridnet:                             # train trên ẢNH GỐC + label YOLO, 10% ảnh train làm val
+  images: data/kayuan/train/images
+  labels: data/kayuan/train/labels
+  grid_rows: 8
+  grid_cols: 8
+  epochs: 40
+  batch_size: 32
+  lr: 0.001
+  pos_weight: 10.0                   # cao hơn -> ưu tiên cell-recall (ít bỏ sót) hơn keep-frac
+  threshold: 0.1                     # chỉ dùng để in cell-recall / keep-frac mỗi epoch
+  patience: 10                       # early stop theo val loss
+
+tile_cnn:                            # train trên dataset ĐÃ CẮT TILE (tạo bởi scripts/train_detector.py)
+  train_images: data/kayuan/train_tiled_uniform/images
+  train_labels: data/kayuan/train_tiled_uniform/labels
+  val_images: data/kayuan/val_tiled_uniform/images
+  val_labels: data/kayuan/val_tiled_uniform/labels
+  img_size: 160
+  batch_size: 64
+  epochs: 40
+  pos_weight: 2.0
