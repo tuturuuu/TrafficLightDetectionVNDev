@@ -11,8 +11,10 @@ type: gridnet                        # gridnet | tile_cnn
 out: weights/gridnet_kayuan_8x8_v2.pth   # script không ghi đè file có sẵn (trừ khi --overwrite)
 
 gridnet:                             # train trên ẢNH GỐC + label YOLO, 10% ảnh train làm val
-  images: data/kayuan/train/images
-  labels: data/kayuan/train/labels
+  images: data/kayuan_sequence/train/images
+  labels: data/kayuan_sequence/train/labels
+  val_images: data/kayuan_sequence/val/images
+  val_labels: data/kayuan_sequence/val/labels
   grid_rows: 8
   grid_cols: 8
   epochs: 40
@@ -21,13 +23,16 @@ gridnet:                             # train trên ẢNH GỐC + label YOLO, 10%
   pos_weight: 10.0                   # cao hơn -> ưu tiên cell-recall (ít bỏ sót) hơn keep-frac
   threshold: 0.1                     # chỉ dùng để in cell-recall / keep-frac mỗi epoch
   patience: 10                       # early stop theo val loss
+  seed: 0
 
 tile_cnn:                            # train trên dataset ĐÃ CẮT TILE (tạo bởi scripts/train_detector.py)
-  train_images: data/kayuan/train_tiled_uniform/images
-  train_labels: data/kayuan/train_tiled_uniform/labels
-  val_images: data/kayuan/val_tiled_uniform/images
-  val_labels: data/kayuan/val_tiled_uniform/labels
+  train_images: data/kayuan_sequence/train_tiled_uniform/images
+  train_labels: data/kayuan_sequence/train_tiled_uniform/labels
+  val_images: data/kayuan_sequence/val_tiled_uniform/images
+  val_labels: data/kayuan_sequence/val_tiled_uniform/labels
   img_size: 160
   batch_size: 64
   epochs: 40
   pos_weight: 2.0
+  patience: 10                       # early stop theo loss trên val_images
+  seed: 0

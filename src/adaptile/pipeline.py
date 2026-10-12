@@ -22,7 +22,8 @@ from .selectors.base import AllTiles
 
 def _sync():
     if torch.cuda.is_available():
-        torch.cuda.synchronize()
+        for device in range(torch.cuda.device_count()):
+            torch.cuda.synchronize(device)
 
 
 @dataclass
@@ -32,6 +33,8 @@ class ImageResult:
     n_kept: int
     t_select: float
     t_detect: float
+    t_merge: float = 0.0
+    t_total: float = 0.0
 
 
 @dataclass
@@ -52,6 +55,8 @@ class Pipeline:
         return cls(**parts)
 
     def __call__(self, image):
+        _sync()
+        t_start = time.perf_counter()
         H, W = image.shape[:2]
         tiles = self.tiler.tiles(H, W)
 
@@ -74,8 +79,12 @@ class Pipeline:
         _sync()
         t_detect = time.perf_counter() - t0
 
-        return ImageResult(self.merger(dets), len(tiles), len(tiles_run),
-                           t_select, t_detect)
+        t0 = time.perf_counter()
+        merged = self.merger(dets)
+        _sync()
+        t_merge = time.perf_counter() - t0
+        return ImageResult(merged, len(tiles), len(tiles_run),
+                           t_select, t_detect, t_merge, time.perf_counter() - t_start)
 
     def warmup(self, images):
         """Giống warmup cũ: mỗi ảnh chạy selector + YOLO trên 2 tile đầu."""
@@ -94,12 +103,26 @@ class DatasetRun:
     select_s: float = 0.0
     detect_s: float = 0.0
     wall_s: float = 0.0
+    merge_s: float = 0.0
+    latency_s: dict = field(default_factory=lambda: {k: [] for k in ("select", "detect", "merge", "total")})
+    peak_gpu_memory_mb: dict = field(default_factory=dict)
 
 
 def run_dataset(pipe, images, n_warmup=3):
     """Chạy pipeline trên list ảnh (đã đọc sẵn). Trả DatasetRun."""
     pipe.warmup(images[:n_warmup])
     run = DatasetRun()
+    _sync()
+    devices = []
+    for component in (pipe.detector, pipe.selector):
+        model = getattr(component, "net", getattr(component, "model", None))
+        if model is not None:
+            for parameter in model.parameters():
+                if parameter.is_cuda and parameter.device.index not in devices:
+                    devices.append(parameter.device.index)
+    for device in devices:
+        torch.cuda.synchronize(device)
+        torch.cuda.reset_peak_memory_stats(device)
     t_wall0 = time.perf_counter()
     for img in images:
         out = pipe(img)
@@ -108,6 +131,10 @@ def run_dataset(pipe, images, n_warmup=3):
         run.kept_tiles += out.n_kept
         run.select_s += out.t_select
         run.detect_s += out.t_detect
+        run.merge_s += out.t_merge
+        for stage in run.latency_s:
+            run.latency_s[stage].append(getattr(out, "t_" + stage))
     _sync()
     run.wall_s = time.perf_counter() - t_wall0
+    run.peak_gpu_memory_mb = {str(d): torch.cuda.max_memory_allocated(d) / 2**20 for d in devices}
     return run

@@ -1,9 +1,14 @@
 """
 GridProposalNet: chọn tile bằng một lượt chạy trên cả ảnh.
 
-Model, dataset và vòng train chuyển nguyên văn từ grid_proposal_net.py cũ (nay là
-scripts/benchmark_gridnet.py, chỉ còn phần benchmark). Checkpoint lưu dạng dict {"state", "grid_rows",
-"grid_cols"}, không pickle class.
+Model, dataset và vòng train chuyển từ grid_proposal_net.py cũ (nay là
+scripts/benchmark_gridnet.py, chỉ còn phần benchmark). Checkpoint lưu dạng dict
+{"state", "grid_rows", "grid_cols"}, không pickle class.
+
+Lưới grid_rows x grid_cols là lưới CỐ ĐỊNH chia đều ảnh gốc, không gắn với tile:
+ô (i, j) phủ vùng [j*W/gc, (j+1)*W/gc) x [i*H/gr, (i+1)*H/gr). Khi chạy pipeline,
+một tile được giữ nếu chồng lên ít nhất một ô "giữ" (adaptile.tiling.grid_mask_for_tiles).
+Chi tiết: doc/selector.md.
 """
 
 import os
@@ -24,11 +29,11 @@ class GridProposalNet(nn.Module):
     """
     Fully-convolutional grid predictor.
 
-    Input : (B, 3, 256, 256) full downsampled image
-    Output: (B, 1, grid_rows, grid_cols) keep-logits, one per tile position
+    Input : (B, 3, 256, 256) full image, resized (aspect ratio not kept)
+    Output: (B, 1, grid_rows, grid_cols) keep-logits, one per grid cell
 
-    ~75k params — same budget as the per-tile classifier, but runs ONCE
-    per image instead of once per tile.
+    48,945 params for an 8x8 grid (the per-tile TileProposalCNN has 74,641), but
+    runs ONCE per image instead of once per tile.
     """
 
     def __init__(self, grid_rows: int = 8, grid_cols: int = 8):
@@ -63,10 +68,11 @@ class GridProposalNet(nn.Module):
 
     @torch.no_grad()
     def propose(self, image_bgr: np.ndarray, threshold: float = 0.2,
-                min_keep: int = 1) -> np.ndarray:
+                min_keep: int = 1):
         """
-        One forward pass → boolean keep-mask of shape (grid_rows, grid_cols).
-        Guarantees at least `min_keep` tiles kept (highest-scoring), so an
+        One forward pass → (keep, probs), both of shape (grid_rows, grid_cols):
+        boolean keep-mask (probs > threshold) and cell probabilities.
+        Guarantees at least `min_keep` cells kept (highest-scoring), so an
         overconfident network can never blank out an image entirely.
         """
         self.eval()
@@ -106,8 +112,9 @@ class GridDataset(Dataset):
     Builds (image, grid_target) pairs directly from full-resolution images
     and YOLO-format labels. No pre-tiled dataset required.
 
-    Cell (i,j) = 1 if any GT box centre lies in tile (i,j) of an
-    (grid_rows x grid_cols) uniform grid over the image.
+    Cell (i,j) = 1 if any GT box centre lies in cell (i,j) of a fixed
+    (grid_rows x grid_cols) uniform grid over the image. Only the centre
+    cell is marked, even when the box spans several cells.
     """
 
     def __init__(self, image_paths, label_dir, grid_rows, grid_cols,
@@ -163,10 +170,10 @@ class GridDataset(Dataset):
 
 def train_gridnet(images, labels, out, grid_rows=8, grid_cols=8, epochs=40,
                   batch_size=32, lr=1e-3, pos_weight=3.0, threshold=0.2,
-                  patience=10, num_workers=4):
-    """Train GridNet trên ảnh gốc + label YOLO; 10% ảnh (cố định, seed 0) làm val.
-    Lưu checkpoint có val loss thấp nhất vào `out`. Logic giữ nguyên bản cũ
-    trong grid_proposal_net.py."""
+                  patience=10, num_workers=4, seed=0, val_images=None, val_labels=None):
+    """Train GridNet trên ảnh gốc + label YOLO; 10% ảnh làm val (cách chia cố
+    định, luôn dùng seed 0 như bản cũ) nếu không truyền val_images/val_labels. `seed` cố định khởi tạo trọng số, thứ tự
+    batch và augment. Lưu checkpoint có val loss thấp nhất vào `out`."""
     from types import SimpleNamespace
     args = SimpleNamespace(images=images, labels=labels, out=out,
                            grid_rows=grid_rows, grid_cols=grid_cols,
@@ -177,16 +184,28 @@ def train_gridnet(images, labels, out, grid_rows=8, grid_cols=8, epochs=40,
     if not images:
         raise RuntimeError(f"No images in {args.images}")
 
-    random.seed(0)
-    random.shuffle(images)
-    n_val = max(1, int(0.1 * len(images)))
-    val_imgs, train_imgs = images[:n_val], images[n_val:]
+    if bool(val_images) != bool(val_labels):
+        raise ValueError("val_images and val_labels must be supplied together")
+    if val_images:
+        val_imgs = sorted(glob(os.path.join(val_images, "*.jpg")) + glob(os.path.join(val_images, "*.png")))
+        if not val_imgs:
+            raise RuntimeError(f"No validation images in {val_images}")
+        train_imgs = images
+    else:
+        random.seed(0)
+        random.shuffle(images)
+        n_val = max(1, int(0.1 * len(images)))
+        val_imgs, train_imgs = images[:n_val], images[n_val:]
+
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)       # khởi tạo, shuffle, và seed của DataLoader worker (cả `random`)
 
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
 
     tr_ds = GridDataset(train_imgs, args.labels, args.grid_rows,
                         args.grid_cols, augment=True)
-    va_ds = GridDataset(val_imgs, args.labels, args.grid_rows,
+    va_ds = GridDataset(val_imgs, val_labels or args.labels, args.grid_rows,
                         args.grid_cols, augment=False)
     tr = DataLoader(tr_ds, batch_size=args.batch_size, shuffle=True,
                     num_workers=num_workers, pin_memory=True)

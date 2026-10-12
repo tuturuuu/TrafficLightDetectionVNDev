@@ -11,7 +11,7 @@
 
 dataset:
   name: kayuan
-  data_yaml: data/kayuan/data.yaml   # data yaml Ultralytics của ảnh gốc (train/val/test + names)
+  data_yaml: data/kayuan_sequence/data.yaml   # data yaml Ultralytics của ảnh gốc (train/val/test + names)
 
 tiling:
   type: uniform                      # uniform: train trên tile cắt sẵn | none: train trên ảnh nguyên
@@ -21,7 +21,7 @@ tiling:
   suffix: _tiled_uniform             # tile lưu ở <thư mục data_yaml>/<split><suffix>/; đã có thì dùng lại, chưa có thì tự cắt
 
 model:
-  arch: yolov8m                      # yolov8m | yolo26m | hoặc đường dẫn file .yaml kiến trúc
+  arch: yolo26m                      # yolov8m | yolo26m | hoặc đường dẫn file .yaml kiến trúc
   attention: cbam                    # none | cbam | se  (có sẵn: yolov8m+none, yolov8m+cbam, yolo26m+none, yolo26m+se)
   pretrained: null                   # file .pt để khởi tạo trọng số (vd yolov8m.pt); null = train từ đầu
 

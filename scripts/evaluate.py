@@ -20,11 +20,14 @@ cộng các metric trong eval), kèm file .yaml ghi lại config đã resolve.
 """
 
 import argparse
+import copy
 import json
 import os
 import sys
 
 import cv2
+import numpy as np
+import torch
 from omegaconf import OmegaConf
 
 from adaptile import DETECTORS, MERGERS, SELECTORS, TILERS, Pipeline, evaluate, run_dataset
@@ -59,6 +62,12 @@ def make_row(tile_size, sel_name, run, n_img, gts, metrics):
         "detect_s": round(run.detect_s, 2),
         "wall_s": round(run.wall_s, 2),
     }
+    row["merge_s"] = round(run.merge_s, 6)
+    row["latency_ms"] = {stage: {"p50": float(np.percentile(values, 50) * 1000),
+                                         "p95": float(np.percentile(values, 95) * 1000)}
+                         for stage, values in run.latency_s.items() if values}
+    row["per_image_latency_ms"] = {stage: [v * 1000 for v in values] for stage, values in run.latency_s.items()}
+    row["peak_gpu_memory_mb"] = run.peak_gpu_memory_mb
     if "fps" in metrics:
         row["fps"] = round(n_img / max(run.wall_s, 1e-9), 2)
     if set(metrics) & set(ACCURACY_KEYS):
@@ -114,6 +123,25 @@ def main():
     selectors = {name: SELECTORS.build(c) for name, c in cfg.selectors.items()}
     tile_sizes = cfg.tile_size if cfg.tiler.name != "none" else [None]
 
+    complexity = {}
+    # THOP counts supported operators; GFLOPs = 2 x MACs, one input/crop.
+    for key, component in {"detector": detector, **selectors}.items():
+        model = getattr(component, "net", getattr(component, "model", None))
+        if model is None:
+            continue
+        model = getattr(model, "model", model)
+        params = sum(p.numel() for p in model.parameters())
+        size = getattr(component, "imgsz", getattr(component, "input_size", 256 if key == "gridnet" else 160))
+        try:
+            import thop
+            profiled = copy.deepcopy(model).cpu().float().eval()
+            with torch.no_grad():
+                flops = 2 * thop.profile(profiled, inputs=(torch.zeros(1, 3, size, size),), verbose=False)[0] / 1e9
+            error = None if flops else "Profiler unavailable or unsupported model"
+        except Exception as exc:
+            flops, error = None, str(exc)
+        complexity[key] = {"params": params, "gflops": flops or None,
+                           "input_size": size, "profiling_error": error}
     rows = []
     for ts in tile_sizes:
         tiler_cfg = OmegaConf.to_container(cfg.tiler)
@@ -123,6 +151,7 @@ def main():
         for name, sel in selectors.items():
             run = run_dataset(Pipeline(tiler, sel, detector, merger), images, cfg.n_warmup)
             row = make_row(ts, name, run, len(images), gts, cfg.metrics)
+            row["model_complexity"] = {k: v for k, v in complexity.items() if k in ("detector", name)}
             rows.append(row)
             shown = [k for k in ("fps", *ACCURACY_KEYS.values()) if k in row]
             print(f"tile={str(ts):>4} {row['method']:8s} "

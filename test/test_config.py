@@ -10,7 +10,7 @@ KAYUAN = "configs/eval/kayuan.yaml"
 
 def test_kayuan_config():
     cfg = load_config(KAYUAN)
-    assert cfg.dataset.images == "data/kayuan/test/images"
+    assert cfg.dataset.images == "data/kayuan_sequence/test/images"
     assert cfg.tiler == {"name": "uniform", "overlap": 0.2, "pad": False}
     assert cfg.tile_size == [640, 480, 320, 240, 160]
     assert list(cfg.selectors) == ["none", "gridnet"]

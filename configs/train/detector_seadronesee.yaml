@@ -6,7 +6,7 @@
 
 dataset:
   name: seadronesee
-  data_yaml: data/SeaDroneSees_70_15_15/data.yaml
+  data_yaml: data/seadrone_sequence/data.yaml
 
 tiling:
   type: uniform                      # uniform | none

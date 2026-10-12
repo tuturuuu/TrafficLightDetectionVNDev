@@ -10,8 +10,8 @@
 
 dataset:
   name: kayuan                       # chỉ dùng để đặt tên output
-  images: data/kayuan/test/images
-  labels: data/kayuan/test/labels    # label YOLO, cùng tên file với ảnh
+  images: data/kayuan_sequence/test/images
+  labels: data/kayuan_sequence/test/labels    # label YOLO, cùng tên file với ảnh
 
 tiling:
   type: uniform                      # uniform | none (YOLO chạy trên ảnh nguyên)
@@ -28,6 +28,7 @@ tile_selector:
     weights: weights/tile_proposal_cnn_kayuan.pth
     threshold: 0.5
     batch_size: 64
+    resize: area                     # area (giống lúc train) | bilinear_legacy (tái lập số cũ của legacy/evaluations)
 
 detector:
   type: yolo                         # mọi biến thể YOLO (v8, v8-CBAM, 26m-SE): chỉ khác weights

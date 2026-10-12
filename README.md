@@ -50,6 +50,8 @@ Repo này là **phase 2** của paper [AT-YOLO: enhanced YOLO-based detector wit
   - `keep-frac`: tỉ lệ ô được giữ. Càng thấp thì càng tiết kiệm.
 - **Threshold** điều chỉnh cân bằng giữa hai chỉ số trên. Tham số `--pos-weight` cao hơn sẽ ưu tiên recall.
 
+So sánh chi tiết GridNet với CNN selector (thế hệ 1): xem [`doc/selector.md`](doc/selector.md).
+
 Chi tiết quy trình thí nghiệm và các quy tắc đo thời gian công bằng: xem [`RUNBOOK.md`](RUNBOOK.md).
 
 ---
@@ -67,6 +69,7 @@ scripts/
   data/       convert_*.py, split_*.py                           # chuẩn bị dataset
 src/adaptile/   code dùng chung: tiling, selector, detector, NMS, metric, pipeline, train
 test/           pytest
+doc/            tài liệu (selector.md)
 legacy/         code cũ đã được thay thế (xem legacy/README.md)
 weights/  outputs/      weight đã train, kết quả thí nghiệm
 data/  runs/            dataset, output Ultralytics (gitignore)
@@ -87,6 +90,7 @@ data/  runs/            dataset, output Ultralytics (gitignore)
 | `legacy/` | Code cũ: `dense_tiling_experiment.py`, `evaluations/`, `cnn_classifier/` (CNN thế hệ 1, Grad-CAM; `small_cnn.py` vẫn được `train_selector.py` gọi khi `type: tile_cnn`), script train phase 1, … Xem [`legacy/README.md`](legacy/README.md) |
 | `weights/` | Weight GridNet, CNN thế hệ 1, YOLO. Nguồn gốc từng file ghi trong [`weights/README.md`](weights/README.md) |
 | `outputs/<dataset>/` | Kết quả `scripts/evaluate.py` và kết quả cũ (`scaling*.json`), heatmap GridNet, Grad-CAM, bảng `report_metrics*`. Xem [`outputs/README.md`](outputs/README.md) |
+| `doc/` | Tài liệu: [`selector.md`](doc/selector.md) giải thích GridNet và CNN selector |
 | `RUNBOOK.md` | Quy trình chạy thí nghiệm cho paper |
 
 Các script mặc định ghi weight vào `weights/` và kết quả vào `outputs/` (chạy từ thư mục gốc repo). **Không để file kết quả ở thư mục gốc.**

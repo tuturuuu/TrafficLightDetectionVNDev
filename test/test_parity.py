@@ -112,10 +112,12 @@ def test_full_kayuan_matches_handoff_numbers(kayuan_full, detector, selectors,
 
 # ── tile_cnn: so với legacy/evaluations/evaluation_with_cnn.py ─────────────────────
 
-@pytest.mark.parametrize("tile_size", [640, 320])
-def test_tile_cnn_selection_identical(kayuan, tile_size):
-    """Điểm CNN và tile được chọn phải giống code cũ. (Phần YOLO/NMS của code cũ
-    khác pipeline chuẩn ở batch size, max_det, nên chỉ so khâu chọn tile.)"""
+@pytest.mark.parametrize("tile_size", [640, 320, 240])
+def test_tile_cnn_selection(kayuan, tile_size):
+    """resize="bilinear_legacy" phải giống hệt legacy/evaluations/evaluation_with_cnn.py;
+    mặc định (area) phải giống tiền xử lý lúc train (cv2 INTER_AREA). Chỉ so khâu
+    chọn tile; YOLO/NMS của code cũ khác pipeline chuẩn ở batch size, max_det."""
+    import cv2
     import numpy as np
     import torch
     import evaluation_with_cnn as old_cnn
@@ -123,18 +125,29 @@ def test_tile_cnn_selection_identical(kayuan, tile_size):
     from conftest import TILE_CNN
 
     images, _ = kayuan
+    dev = torch.device("cuda:0")
     new = TileCNNSelector(TILE_CNN, threshold=0.5)
-    old_model = old_cnn.load_tile_model(TILE_CNN, torch.device("cuda:0"))
+    legacy_mode = TileCNNSelector(TILE_CNN, threshold=0.5, resize="bilinear_legacy")
+    old_model = old_cnn.load_tile_model(TILE_CNN, dev)
     n_kept = 0
     for i, img in enumerate(images):
         tiles = UniformTiler(tile_size, 0.2).tiles(*img.shape[:2])
         old_tiles = old_cnn.build_tiles(img, tile_size, 0.2)
         assert [(t[0], t[1]) for t in tiles] == [(t["x"], t["y"]) for t in old_tiles]
+
+        # 1) chế độ legacy == code cũ, từng bit
         old_scores = old_cnn.tile_model_scores_batched(
-            old_model, [t["image"] for t in old_tiles], torch.device("cuda:0"),
-            min(len(old_tiles), 64))
-        new_scores = new.scores(img, tiles)
-        np.testing.assert_array_equal(new_scores, old_scores, err_msg=f"ảnh {i}")
-        np.testing.assert_array_equal(new.select(img, tiles), old_scores > 0.5)
-        n_kept += int((old_scores > 0.5).sum())
+            old_model, [t["image"] for t in old_tiles], dev, min(len(old_tiles), 64))
+        np.testing.assert_array_equal(legacy_mode.scores(img, tiles), old_scores,
+                                      err_msg=f"ảnh {i}")
+
+        # 2) mặc định == tiền xử lý lúc train (small_cnn.TileDataset, không augment)
+        train_style = np.stack([
+            cv2.resize(cv2.cvtColor(t["image"], cv2.COLOR_BGR2RGB), (160, 160),
+                       interpolation=cv2.INTER_AREA) for t in old_tiles])
+        x = torch.from_numpy(train_style).to(dev).permute(0, 3, 1, 2).contiguous().float() / 255.0
+        with torch.no_grad():
+            ref = torch.sigmoid(old_model(x).squeeze(1)).cpu().numpy()
+        np.testing.assert_allclose(new.scores(img, tiles), ref, atol=1e-5, err_msg=f"ảnh {i}")
+        n_kept += int((ref > 0.5).sum())
     assert n_kept > 0

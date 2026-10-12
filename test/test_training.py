@@ -26,10 +26,10 @@ def fake_dataset(root, n=4, size=(720, 1280), seed=0):
         (root / split / "labels").mkdir(parents=True)
         for i in range(n):
             img = rng.integers(0, 255, size=(*size, 3), dtype=np.uint8)
-            cv2.imwrite(str(root / split / "images" / f"im{i}.jpg"), img)
+            cv2.imwrite(str(root / split / "images" / f"{split}{i}.jpg"), img)
             lines = [f"{rng.integers(2)} {rng.uniform(0.1, 0.9):.4f} {rng.uniform(0.1, 0.9):.4f} 0.02 0.04"
                      for _ in range(5)]
-            (root / split / "labels" / f"im{i}.txt").write_text("\n".join(lines) + "\n")
+            (root / split / "labels" / f"{split}{i}.txt").write_text("\n".join(lines) + "\n")
     (root / "data.yaml").write_text(
         "train: train/images\nval: val/images\nnames:\n  0: a\n  1: b\n")
     return root / "data.yaml"
@@ -48,7 +48,9 @@ def det_cfg(data_yaml, **tiling):
 @pytest.mark.parametrize("arch,att,expected", [
     ("yolov8m", "cbam", "configs/models/YOLOv8_CBAM.yaml"),
     ("yolov8m", "none", "yolov8m.yaml"),
-    ("yolo26m", "se", "configs/models/yolo26m-modified.yaml"),
+    ("yolo26m", "se", "configs/models/yolo26m-se.yaml"),
+    ("yolo26m", "cbam", "configs/models/yolo26m-cbam.yaml"),
+    ("yolo26m", "none", "configs/models/yolo26m-p2.yaml"),
     ("my/arch.yaml", "cbam", "my/arch.yaml"),
 ])
 def test_resolve_arch(arch, att, expected):
@@ -156,3 +158,31 @@ def test_train_gridnet_one_epoch(tmp_path):
     net = GridProposalNet.load(str(out))
     keep, probs = net.propose(np.zeros((720, 1280, 3), np.uint8))
     assert keep.shape == probs.shape == (8, 8)
+
+
+@pytest.mark.full
+@pytest.mark.gpu
+def test_train_tile_cnn_two_epochs(tmp_path):
+    """small_cnn.py: train có vòng val, lưu checkpoint val loss thấp nhất."""
+    import subprocess
+    import sys
+
+    import torch
+    from adaptile.dataset_tiling import ensure_tiled
+    from adaptile.models.tile_cnn import TileProposalCNN, load_state_dict
+    from adaptile.training import REPO
+
+    ds = tmp_path / "ds"
+    fake_dataset(ds, n=4)
+    for split in ("train", "val"):
+        ensure_tiled(ds / split / "images", ds / split / "labels",
+                     ds / f"{split}_tiled", 640, 0.2, 0.3)
+    out = tmp_path / "cnn.pth"
+    log = subprocess.run(
+        [sys.executable, str(REPO / "legacy/cnn_classifier/small_cnn.py"),
+         "--train-images", str(ds / "train_tiled/images"), "--train-labels", str(ds / "train_tiled/labels"),
+         "--val-images", str(ds / "val_tiled/images"), "--val-labels", str(ds / "val_tiled/labels"),
+         "--out", str(out), "--epochs", "2", "--batch-size", "8"],
+        capture_output=True, text=True, check=True).stdout
+    assert log.count("Val loss:") == 2 and "best val loss" in log
+    load_state_dict(TileProposalCNN(), str(out), torch.device("cpu"))

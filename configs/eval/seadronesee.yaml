@@ -10,8 +10,8 @@
 
 dataset:
   name: seadronesee
-  images: data/SeaDroneSees_70_15_15/images/test
-  labels: data/SeaDroneSees_70_15_15/labels/test
+  images: data/seadrone_sequence/test/images
+  labels: data/seadrone_sequence/test/labels
 
 tiling:
   type: uniform                      # uniform | none
@@ -28,6 +28,7 @@ tile_selector:
     weights: weights/tile_proposal_cnn_model.pth   # chưa rõ nguồn gốc, xem weights/README.md
     threshold: 0.5
     batch_size: 64
+    resize: area                     # area (giống lúc train) | bilinear_legacy (tái lập số cũ của legacy/evaluations)
 
 detector:
   type: yolo

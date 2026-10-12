@@ -21,8 +21,9 @@ REPO = Path(__file__).resolve().parents[2]
 ARCHS = {
     ("yolov8m", "none"): "yolov8m.yaml",
     ("yolov8m", "cbam"): "configs/models/YOLOv8_CBAM.yaml",
-    ("yolo26m", "none"): "yolo26m.yaml",
-    ("yolo26m", "se"): "configs/models/yolo26m-modified.yaml",
+    ("yolo26m", "none"): "configs/models/yolo26m-p2.yaml",
+    ("yolo26m", "se"): "configs/models/yolo26m-se.yaml",
+    ("yolo26m", "cbam"): "configs/models/yolo26m-cbam.yaml",
 }
 
 

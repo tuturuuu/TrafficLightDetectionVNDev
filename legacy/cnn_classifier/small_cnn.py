@@ -27,7 +27,13 @@ parser.add_argument("--img-size", type=int, default=160)
 parser.add_argument("--batch-size", type=int, default=64)
 parser.add_argument("--epochs", type=int, default=40)
 parser.add_argument("--pos-weight", type=float, default=2.0)
+parser.add_argument("--patience", type=int, default=10, help="early stop theo val loss")
+parser.add_argument("--seed", type=int, default=0)
 args = parser.parse_args()
+
+random.seed(args.seed)
+np.random.seed(args.seed)
+torch.manual_seed(args.seed)
 
 IMAGE_DIR = args.train_images
 LABEL_DIR = args.train_labels
@@ -346,10 +352,13 @@ scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
 # =====================================================
 # TRAIN
 # =====================================================
+# Early stopping, LR schedule và chọn checkpoint đều theo loss trên tập val
+# (--val-images); lưu epoch có val loss thấp nhất.
 
 best_loss = float('inf')
+best_state = None
 patience_counter = 0
-early_stopping_patience = 10
+early_stopping_patience = args.patience
 
 for epoch in range(EPOCHS):
 
@@ -379,15 +388,25 @@ for epoch in range(EPOCHS):
 
     avg_loss = running_loss / len(train_loader)
 
-    scheduler.step(avg_loss)
+    model.eval()
+    val_loss, n_val = 0.0, 0
+    with torch.no_grad():
+        for imgs, labels, _ in test_loader:
+            imgs, labels = imgs.to(DEVICE), labels.to(DEVICE)
+            val_loss += criterion(model(imgs).squeeze(1), labels).item() * imgs.size(0)
+            n_val += imgs.size(0)
+    val_loss /= max(n_val, 1)
+
+    scheduler.step(val_loss)
 
     print(
         f"Epoch {epoch+1}/{EPOCHS} "
-        f"Loss: {avg_loss:.4f}"
+        f"Loss: {avg_loss:.4f}  Val loss: {val_loss:.4f}"
     )
 
-    if avg_loss < best_loss:
-        best_loss = avg_loss
+    if val_loss < best_loss:
+        best_loss = val_loss
+        best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
         patience_counter = 0
     else:
         patience_counter += 1
@@ -396,10 +415,11 @@ for epoch in range(EPOCHS):
         print(f"Early stopping at epoch {epoch+1}")
         break
 
-# Save the model
+# Save the best model (val loss thấp nhất)
+model.load_state_dict(best_state)
 os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
-torch.save(model.state_dict(), args.out)
-print(f"Model saved to {args.out}")
+torch.save(best_state, args.out)
+print(f"Model saved to {args.out} (best val loss {best_loss:.4f})")
 
 # =====================================================
 # EVALUATE
