@@ -112,6 +112,11 @@ def main():
 
     cfg = load_config(args.config, args.overrides)
     print(OmegaConf.to_yaml(cfg.source))
+    if cfg.protocol == 'lat_yolo_v1':
+        from adaptile.evaluation_lts import run_evaluation
+        run_evaluation(cfg)
+        print(f'LAT-YOLO records saved to {cfg.out}')
+        return
     if os.path.exists(cfg.out) and not args.overwrite:
         sys.exit(f"{cfg.out} đã tồn tại; đổi eval.out=... hoặc thêm --overwrite")
 

@@ -8,6 +8,9 @@ version = "0.1.0"
 description = "Adaptive tiling (GridNet) cho YOLO + tiling"
 requires-python = ">=3.10"
 
+[project.optional-dependencies]
+research = ["pycocotools>=2.0.10,<3"]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 

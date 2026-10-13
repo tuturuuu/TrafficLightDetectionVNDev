@@ -1,3 +1,14 @@
+## LAT-YOLO: separate experiment protocol
+
+The steps below retain the historical GridNet workflow. For shared-YOLO LTS,
+frozen versus joint training, paired checkpoints, COCO AP, full-path warmup and
+three-seed summaries, use [the LAT-YOLO runbook](doc/lat_yolo_implementation.md).
+Do not mix historical scores/timings with the new `lat_yolo_v1` protocol.
+GridNet cell keep-frac is NOT the fraction of candidate tiles kept: overlapping
+tiles may intersect multiple grid cells. Measure actual `kept_per_img` instead.
+A missed cell also need not imply a missed detection if another selected,
+overlapping tile still covers the object. No fixed overhead/speedup is guaranteed.
+
 ## Step 1 — Train the grid net
 Uses **full images + YOLO labels directly** — no pre-tiled dataset needed.
 

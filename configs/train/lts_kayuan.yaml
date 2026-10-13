@@ -1,0 +1,36 @@
+# Experimental settings, not measured optima. Supply a clean trained detector.
+training_mode: frozen_head_pilot # frozen_head_pilot | joint
+out: runs/lat_yolo/kayuan/lts_frozen_seed0
+dataset:
+  data_yaml: data/kayuan_sequence/data.yaml
+  train_images: data/kayuan_sequence/train/images
+  train_labels: data/kayuan_sequence/train/labels
+  val_images: data/kayuan_sequence/val/images
+  val_labels: data/kayuan_sequence/val/labels
+  split_manifest: data/kayuan_sequence/split_manifest.json
+detector:
+  weights: ??? # exact task-trained YOLO26m-P2-P5 checkpoint
+  imgsz: 640
+features:
+  feature_stage: 4 # P3 for none; use 5 for SE/CBAM (after attention)
+  coarse_imgsz: 640
+tiling:
+  tile_size: 640
+  overlap: 0.2
+  min_visibility: 0.3
+loss: {box: 7.5, cls: 0.5, dfl: 1.5}
+train:
+  seed: 0
+  device: cpu # explicitly override with cuda:0 for an approved GPU run
+  epochs: 40
+  batch_size: 4
+  workers: 0
+  lr: 0.001
+  weight_decay: 0.0005
+  lambda_rel: 1.0 # experimental; tune on val
+  pos_weight: 1.0 # experimental; do not inherit GridNet's optimum
+  threshold: 0.5 # diagnostic only; selection is not used to backpropagate L_det
+  patience: 10
+  warmup_steps: 100
+  amp: true
+  clip_grad: 10.0

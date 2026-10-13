@@ -1,0 +1,46 @@
+# Experimental validation comparison; supply the detector paired with lts.weights.
+dataset:
+  name: kayuan
+  data_yaml: data/kayuan_sequence/data.yaml
+  images: data/kayuan_sequence/val/images
+  labels: data/kayuan_sequence/val/labels
+  split_manifest: data/kayuan_sequence/split_manifest.json
+tiling: {type: uniform, tile_size: 640, overlap: 0.2, pad: false}
+tile_selector:
+  type: [none, param_free_avg, lts]
+  param_free_avg: {feature_stage: 4, coarse_imgsz: 640, threshold: 0.5, min_keep: 0}
+  lts:
+    weights: ??? # <training run>/<best directory>/lts.pt
+    feature_stage: 4 # 5 for matched SE/CBAM
+    coarse_imgsz: 640
+    threshold: 0.5
+    min_keep: 0
+    force_keep_all: false
+  gridnet: {weights: '???', threshold: 0.1}
+  tile_cnn: {weights: '???', threshold: 0.5, batch_size: 64, resize: area}
+detector:
+  type: yolo
+  weights: ??? # <training run>/<best directory>/detector.pt
+  conf: 0.001 # AP evaluation; operating-point P/R is explicitly recorded
+  imgsz: 640
+  batch: 16
+  device: cpu
+  iou: 0.7 # intra-tile; distinct from cross-tile NMS
+  max_det: 300
+  half: false
+merger: {type: nms, iou_thr: 0.5, max_det: 300}
+eval:
+  experiment_id: kayuan_lts_validation
+  protocol: lat_yolo_v1
+  metric_backend: coco
+  coco_max_dets: 100
+  metrics: [map50, map50_95, ap_small, precision, recall, f1, fps]
+  n_warmup: 3
+  warmup_mode: full
+  profile_stages: true # run false separately for minimally instrumented wall FPS
+  export_predictions: true
+  visualize: 3
+  coverage_visibility: 0.5
+  max_images: null
+  seed: 0
+  out: outputs/lat_yolo/kayuan/val_seed0.json

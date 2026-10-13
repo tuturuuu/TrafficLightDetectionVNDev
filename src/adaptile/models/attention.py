@@ -46,9 +46,15 @@ class ChannelAttention(nn.Module):
             nn.Conv2d(hidden, c, 1, bias=False),
         )
 
+    def materialize(self, channels, device=None, dtype=None):
+        if self.mlp is None:
+            self._init_layers(channels)
+            self.mlp.to(device=device, dtype=dtype)
+        return self
+
     def forward(self, x):
         if self.mlp is None:
-            self._init_layers(x.shape[1])
+            self.materialize(x.shape[1], x.device, x.dtype)
         avg = self.mlp(self.avg_pool(x))
         max = self.mlp(self.max_pool(x))
         return torch.sigmoid(avg + max)
@@ -62,6 +68,11 @@ class CBAM(nn.Module):
         super().__init__()
         self.ca = ChannelAttention(ratio)
         self.sa = SpatialAttention(kernel_size)
+
+    def materialize(self, channels, device=None, dtype=None):
+        self.ca.materialize(channels, device, dtype)
+        self.sa.to(device=device, dtype=dtype)
+        return self
 
     def forward(self, x):
         x = x * self.ca(x)
@@ -82,13 +93,19 @@ class SE(nn.Module):
         self.conv1 = None
         self.conv2 = None
 
+    def materialize(self, channels, device=None, dtype=None):
+        if self.conv1 is None:
+            hidden = max(channels // self.r, 1)
+            self.conv1 = nn.Conv2d(channels, hidden, 1).to(device=device, dtype=dtype)
+            self.conv2 = nn.Conv2d(hidden, channels, 1).to(device=device, dtype=dtype)
+        return self
+
     def forward(self, x):
         b, c, _, _ = x.shape
 
         # Lazy init (key fix)
         if self.conv1 is None:
-            self.conv1 = nn.Conv2d(c, c // self.r, 1).to(x.device)
-            self.conv2 = nn.Conv2d(c // self.r, c, 1).to(x.device)
+            self.materialize(c, x.device, x.dtype)
 
         y = self.pool(x)
         y = self.conv2(torch.relu(self.conv1(y)))

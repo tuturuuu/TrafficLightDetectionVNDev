@@ -1,5 +1,13 @@
 # HANDOFF: tiếp tục công việc với Claude ở máy khác
 
+> **Cập nhật LAT-YOLO, 2026-10-12:** làm trực tiếp trên `lts-applied` theo yêu cầu
+> user, không tạo branch/commit. `spec.md` là nguồn phương pháp; không cần bản thảo
+> riêng. Giữ YOLO26m P2–P5. Bỏ qua P1.1 vì user đã giải quyết leakage.
+> LTS/param-free, trainer joint/frozen và evaluator mới đã có kiểm thử CPU; chưa
+> chạy training GPU dài hoặc công bố số liệu. Trạng thái, lệnh và giới hạn tại
+> [doc/lat_yolo_implementation.md](doc/lat_yolo_implementation.md).
+> Quyết định này thay thế hướng dẫn branch/nguồn phương pháp cũ bên dưới cho LAT-YOLO.
+
 > **Cách dùng:** mở session Claude mới trong thư mục repo và nói:
 > *"Đọc HANDOFF.md rồi tiếp tục từ mục 'Việc tiếp theo'."*
 >

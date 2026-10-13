@@ -1,5 +1,12 @@
 # Adaptive Tiling: chọn tile thông minh để tăng tốc YOLO + tiling
 
+> **LAT-YOLO (2026-10-12):** đã bổ sung selector `lts` dùng chung backbone YOLO và
+> `param_free_avg`, trainer frozen/joint, cùng protocol evaluation riêng. Giữ kiến
+> trúc YOLO26m P2–P5 và các baseline GridNet/TileCNN. Xem
+> [hướng dẫn triển khai và thực nghiệm](doc/lat_yolo_implementation.md).
+> Đã kiểm thử CPU; chưa có kết quả nghiên cứu LAT-YOLO hay benchmark GPU.
+> Phần GridNet bên dưới mô tả luồng thí nghiệm trước đó, không phải LTS.
+
 Repo này là **phase 2** của paper [AT-YOLO: enhanced YOLO-based detector with attention mechanism](https://www.spiedigitallibrary.org/conference-proceedings-of-spie/14309/143090V/AT-YOLO--enhanced-YOLO-based-detector-with-attention-mechanism/10.1117/12.3120875.full) (SPIE Proc. 14309, 143090V, DOI: [10.1117/12.3120875](https://doi.org/10.1117/12.3120875)).
 
 > **Người mới:** đọc lần lượt [Bối cảnh](#1-bối-cảnh) → [Phương pháp](#2-phương-pháp-gridnet) → [Cấu trúc repo](#3-cấu-trúc-repo) → [Chạy thử](#5-chạy-thử). Trước khi chạy bất cứ thứ gì, đọc [Lưu ý quan trọng](#7-lưu-ý-quan-trọng).

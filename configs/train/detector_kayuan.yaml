@@ -32,7 +32,7 @@ train:
   batch: 16
   patience: 30                       # early stop
   workers: 8
-  device: 0                          # GPU id, vd 0, 1, "0,1" hoặc "cpu"
+  device: 1                          # GPU id, vd 0, 1, "0,1" hoặc "cpu"
   deterministic: true
   extra: {}                          # tham số khác của Ultralytics model.train, vd {lr0: 0.005, mosaic: 0.5}
 
