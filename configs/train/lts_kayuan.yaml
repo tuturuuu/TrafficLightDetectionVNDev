@@ -2,12 +2,12 @@
 training_mode: frozen_head_pilot # frozen_head_pilot | joint
 out: runs/lat_yolo/kayuan/lts_frozen_seed0
 dataset:
-  data_yaml: data/kayuan_sequence/data.yaml
-  train_images: data/kayuan_sequence/train/images
-  train_labels: data/kayuan_sequence/train/labels
-  val_images: data/kayuan_sequence/val/images
-  val_labels: data/kayuan_sequence/val/labels
-  split_manifest: data/kayuan_sequence/split_manifest.json
+  data_yaml: data/kaiyuan_cd/data.yaml
+  train_images: data/kaiyuan_cd/train/images
+  train_labels: data/kaiyuan_cd/train/labels
+  val_images: data/kaiyuan_cd/val/images
+  val_labels: data/kaiyuan_cd/val/labels
+  split_manifest: data/kaiyuan_cd/split_manifest.json
 detector:
   weights: ??? # exact task-trained YOLO26m-P2-P5 checkpoint
   imgsz: 640
@@ -23,8 +23,8 @@ train:
   seed: 0
   device: cpu # explicitly override with cuda:0 for an approved GPU run
   epochs: 40
-  batch_size: 4
-  workers: 0
+  batch_size: 16
+  workers: 20
   lr: 0.001
   weight_decay: 0.0005
   lambda_rel: 1.0 # experimental; tune on val

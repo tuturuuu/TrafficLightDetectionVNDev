@@ -48,6 +48,14 @@ data/kayuan_sequence/
   test/images/   test/labels/
 ```
 
+Nếu chưa có dataset (máy mới), tải Kayuan `label2` từ Google Drive và tạo lại
+split này bằng một lệnh. Cần Drive API key trong `.env` (`GDRIVE_API_KEY=...`),
+xem README mục Dataset:
+
+```bash
+scripts/data/fetch_kayuan_gdrive.sh
+```
+
 P1.1 đã được bạn giải quyết. Các bước dưới dùng split này. Checkpoint YOLO26 đang
 có ở `runs/eval2/...` là thí nghiệm 5 epoch trên `data/kayuan`; quy trình mới tạo
 checkpoint riêng trên `kayuan_sequence`.

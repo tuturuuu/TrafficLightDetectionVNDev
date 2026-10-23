@@ -45,3 +45,6 @@ eval_logs/kayuan_gridnet_val_thr010
 # Python package build
 *.egg-info/
 .pytest_cache/
+
+
+eval_logs/

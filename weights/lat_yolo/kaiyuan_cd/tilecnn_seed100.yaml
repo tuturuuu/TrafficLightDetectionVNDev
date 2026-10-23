@@ -1,0 +1,27 @@
+type: tile_cnn
+out: weights/lat_yolo/kaiyuan_cd/tilecnn_seed100.pth
+gridnet:
+  images: data/kayuan_sequence/train/images
+  labels: data/kayuan_sequence/train/labels
+  val_images: data/kayuan_sequence/val/images
+  val_labels: data/kayuan_sequence/val/labels
+  grid_rows: 8
+  grid_cols: 8
+  epochs: 40
+  batch_size: 32
+  lr: 0.001
+  pos_weight: 10.0
+  threshold: 0.1
+  patience: 10
+  seed: 0
+tile_cnn:
+  train_images: data/kaiyuan_cd/train_lat640_ov20_v1/images
+  train_labels: data/kaiyuan_cd/train_lat640_ov20_v1/labels
+  val_images: data/kaiyuan_cd/val_lat640_ov20_v1/images
+  val_labels: data/kaiyuan_cd/val_lat640_ov20_v1/labels
+  img_size: 160
+  batch_size: 64
+  epochs: 40
+  pos_weight: 2.0
+  patience: 10
+  seed: 100

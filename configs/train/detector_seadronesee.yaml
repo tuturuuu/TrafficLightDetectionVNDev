@@ -16,7 +16,7 @@ tiling:
   suffix: _tiled_uniform
 
 model:
-  arch: yolov8m                      # yolov8m | yolo26m | đường dẫn .yaml
+  arch: yolo26m                      # yolov8m | yolo26m | đường dẫn .yaml
   attention: cbam                    # none | cbam | se
   pretrained: null
 
@@ -33,4 +33,4 @@ train:
 
 output:
   project: runs
-  name: seadronesees_yolov8_cbam_tiled
+  name: seadronesees_yolo26m_cbam_tiled

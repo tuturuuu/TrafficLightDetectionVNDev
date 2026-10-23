@@ -90,7 +90,7 @@ data/  runs/            dataset, output Ultralytics (gitignore)
 | `scripts/benchmark_gridnet.py` | Benchmark GridNet: thời gian mỗi ảnh, cell-recall, ảnh heatmap |
 | `scripts/collect_report_metrics.py` | Gom metric nhiều seed (từ `runs/`) thành bảng `report_metrics*.md` |
 | `scripts/tile_dataset.py` | Cắt dataset thành tile bằng tay (vd tập test). `train_detector.py` đã tự cắt train/val |
-| `scripts/data/` | Chuyển COCO/BTSD sang YOLO, chia train/val/test SeaDroneSee |
+| `scripts/data/` | Tải Kayuan từ Google Drive (`fetch_kayuan_gdrive.sh`), chuyển COCO/BTSD sang YOLO, chia train/val/test theo video |
 | `configs/models/yolo26m-modified.yaml` | **Detector chính của phase 2**: YOLO26m + khối SE. `YOLOv8_CBAM.yaml`: YOLOv8m + CBAM |
 | `src/adaptile/` | Pipeline Tiler → TileSelector (`none` / `gridnet` / `tile_cnn`) → Detector → NMS → eval có xét class, và phần train. Thêm thành phần mới bằng `@SELECTORS.register("tên")` (xem `registry.py`). CBAM/SE ở `models/attention.py`, GridNet ở `models/gridnet.py` |
 | `test/` | Test đơn vị, test so khớp pipeline mới với code cũ, test train (xem mục 4) |
@@ -134,10 +134,22 @@ Tất cả dataset ở **định dạng YOLO** (`images/{train,val,test}`, `labe
 
 | Dataset | Đối tượng | Số class | Nguồn tải | Đường dẫn trong repo |
 |---|---|---|---|---|
-| Kayuan | Đèn giao thông | 16 | `[TODO: link]` | `data/kayuan/` |
+| Kayuan | Đèn giao thông | 16 | [Drive `2024kaiyuan`](https://drive.google.com/drive/folders/10GZVEYIJt38YVjBvMeaYKo8sg4RxAGrr), phần `label2`; tải bằng `scripts/data/fetch_kayuan_gdrive.sh` | `data/kayuan/` → split `data/kayuan_sequence/` |
+| Kaiyuan countdown | Đèn + đồng hồ đếm ngược | 40 (gốc trên Drive: ID 0–43) | Cùng folder Drive, phần `20240425-trafficlightandcountdowndisplay-1000` | `data/kaiyuan_cd/` |
 | SeaDroneSee | Người bơi, thuyền, phao… (ảnh drone) | 5 | `[TODO: link]` | `data/SeaDroneSees_70_15_15/` |
 | VisDrone | `[TODO]` | `[TODO]` | `[TODO: link]` | `[TODO]` |
 | Bosch (BSTLD) | Đèn giao thông | `[TODO]` | `[TODO: link]` | `[TODO]` |
+
+**Tải Kayuan từ Drive** (không cần đăng nhập, cần Drive API key vì `train/images` có hơn 5500 file, quá giới hạn listing public; tạo key ở Google Cloud Console → bật Google Drive API → Credentials → API key):
+
+```bash
+echo 'GDRIVE_API_KEY=<KEY>' >> .env   # .env đã gitignore; chỉ cần làm một lần
+scripts/data/fetch_kayuan_gdrive.sh
+```
+
+Script tải `train/val/test` (images + labels) vào `data/kayuan/`, tạo `data.yaml` 16 class, rồi chạy `check_split_leakage.py` để tạo `data/kayuan_sequence/` (14127 / 3036 / 3035). Chạy lại cùng lệnh để tải tiếp file thiếu. Folder Drive khác: `python scripts/data/fetch_gdrive_folder.py <folder_id> <dest> [--api-key KEY]`.
+
+Bản countdown trên Drive giữ class ID gốc; `data/kaiyuan_cd/` là bản đã chuyển sang 40 class của paper (ID 12–40 lùi 1, bỏ ID 41–43). Repo chưa có script chuyển đổi này.
 
 ---
 
