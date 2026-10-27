@@ -151,6 +151,21 @@ def _restore_rng(state):
         torch.cuda.set_rng_state_all(state['cuda'])
 
 
+def optimizer_step(loss, parameters, optimizer, scaler, scheduler, clip_grad):
+    """Advance the LR schedule only when AMP actually applies an update."""
+    previous_scale = scaler.get_scale()
+    scaler.scale(loss).backward()
+    scaler.unscale_(optimizer)
+    torch.nn.utils.clip_grad_norm_(parameters, clip_grad,
+                                  error_if_nonfinite=not scaler.is_enabled())
+    scaler.step(optimizer)
+    scaler.update()
+    stepped = scaler.get_scale() >= previous_scale
+    if stepped:
+        scheduler.step()
+    return stepped
+
+
 def train_lts(config, dry_run=False, resume=None, stop_after_epochs=None):
     """Config-driven trainer; existing run directories are accepted only for resume."""
     from ultralytics import YOLO
@@ -163,6 +178,9 @@ def train_lts(config, dry_run=False, resume=None, stop_after_epochs=None):
     if cfg['training_mode'] not in MODES:
         raise ValueError(f'training_mode must be one of {MODES}')
     tr = cfg['train']
+    amp_dtype_name = tr.get('amp_dtype', 'float16')
+    if amp_dtype_name not in ('float16', 'bfloat16'):
+        raise ValueError('train.amp_dtype must be float16 or bfloat16')
     for key in ('epochs', 'batch_size', 'patience'):
         if not isinstance(tr[key], int) or isinstance(tr[key], bool) or tr[key] <= 0:
             raise ValueError(f'train.{key} must be a positive integer')
@@ -220,7 +238,10 @@ def train_lts(config, dry_run=False, resume=None, stop_after_epochs=None):
 
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_factor)
     amp = bool(tr.get('amp', True) and device.type == 'cuda')
-    scaler = torch.amp.GradScaler('cuda', enabled=amp)
+    amp_dtype = getattr(torch, amp_dtype_name)
+    if amp and amp_dtype == torch.bfloat16 and not torch.cuda.is_bf16_supported():
+        raise ValueError('Configured CUDA device does not support bfloat16 AMP')
+    scaler = torch.amp.GradScaler('cuda', enabled=amp and amp_dtype == torch.float16)
     start, best, bad_epochs, history = 0, float('inf'), 0, []
     if resume is not None:
         state = torch.load(resume, map_location='cpu', weights_only=False)
@@ -250,15 +271,15 @@ def train_lts(config, dry_run=False, resume=None, stop_after_epochs=None):
             for samples in loader:
                 if training:
                     optimizer.zero_grad(set_to_none=True)
-                with torch.set_grad_enabled(training), torch.autocast(device_type=device.type, enabled=amp):
+                with torch.set_grad_enabled(training), torch.autocast(device_type=device.type, enabled=amp, dtype=amp_dtype):
                     values = system.losses(samples)
                 if not torch.isfinite(values['loss']):
-                    raise FloatingPointError('Nonfinite LTS training loss')
+                    components = {key: float(values[key].detach()) for key in totals}
+                    raise FloatingPointError(f'Nonfinite LTS loss: epoch={epoch + 1} split={split} '
+                                             f'components={components}')
                 if training:
-                    scaler.scale(values['loss']).backward()
-                    scaler.unscale_(optimizer)
-                    torch.nn.utils.clip_grad_norm_(system.parameters(), tr.get('clip_grad', 10.))
-                    scaler.step(optimizer); scaler.update(); scheduler.step()
+                    optimizer_step(values['loss'], system.parameters(), optimizer, scaler, scheduler,
+                                   tr.get('clip_grad', 10.))
                 for key in totals:
                     totals[key] += float(values[key].detach()) * len(samples)
                 seen += len(samples)

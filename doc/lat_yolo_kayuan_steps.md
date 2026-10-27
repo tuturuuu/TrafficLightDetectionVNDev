@@ -1,5 +1,9 @@
 # Chạy LAT-YOLO trên Kayuan, từng bước
 
+> For current English commands mapped to every row of Tables I–VI, use
+> [RUNBOOK.md](../RUNBOOK.md). The historical walkthrough below uses a different
+> Kaiyuan subset and defaults; follow the RUNBOOK for the paper tables.
+
 Luồng chính: **YOLO26m P2–P5 trên ảnh nguyên -> YOLO26m P2–P5 trên tile ->
 LTS joint -> chọn threshold trên validation -> test ba seed -> tổng hợp metrics**.
 

@@ -48,3 +48,9 @@ eval_logs/kayuan_gridnet_val_thr010
 
 
 eval_logs/
+
+doc/LAT_YOLO.pdf
+
+outputs/
+
+configs/experiments/

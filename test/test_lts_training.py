@@ -4,7 +4,7 @@ import torch
 
 from adaptile.detectors import YOLODetector, register_custom_modules
 from adaptile.selectors import LTSSelector
-from adaptile.training_lts import LTSSystem, export_pair, fine_training_batch
+from adaptile.training_lts import LTSSystem, export_pair, fine_training_batch, optimizer_step
 
 
 def make_system(mode):
@@ -26,6 +26,24 @@ def samples():
 
 def norm(parameters):
     return sum(float(p.grad.abs().sum()) for p in parameters if p.grad is not None)
+
+
+def test_amp_overflow_does_not_advance_optimizer_or_schedule():
+    parameter = torch.nn.Parameter(torch.tensor(1.))
+    optimizer = torch.optim.SGD([parameter], lr=.1)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=.5)
+    scaler = torch.amp.GradScaler('cpu')
+    before_epoch, before_lr = scheduler.last_epoch, optimizer.param_groups[0]['lr']
+    # The unscaled loss is finite; scaling makes its gradient overflow.
+    assert not optimizer_step(parameter * 1e35, [parameter], optimizer, scaler, scheduler, 10.)
+    assert parameter.item() == 1.
+    assert scheduler.last_epoch == before_epoch
+    assert optimizer.param_groups[0]['lr'] == before_lr
+    optimizer.zero_grad(set_to_none=True)
+    assert optimizer_step(parameter.square(), [parameter], optimizer, scaler, scheduler, 10.)
+    assert parameter.item() < 1.
+    assert scheduler.last_epoch == before_epoch + 1
+    assert optimizer.param_groups[0]['lr'] == before_lr / 2
 
 
 def test_joint_losses_reach_intended_parameters_and_update_once():
