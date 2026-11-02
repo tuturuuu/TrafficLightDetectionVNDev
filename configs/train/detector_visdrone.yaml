@@ -1,0 +1,34 @@
+# LAT-YOLO stage 1: YOLO26m P2-P5 + SE, uniform VisDrone tiles.
+dataset:
+  name: visdrone
+  data_yaml: data/visdrone/data.yaml
+
+tiling:
+  type: uniform
+  tile_size: 640
+  overlap: 0.2
+  min_visibility: 0.3
+  suffix: _lat640_ov20_v1
+
+model:
+  arch: yolo26m
+  attention: se
+  pretrained: null
+
+train:
+  seeds: [0, 42, 100]
+  epochs: 100
+  imgsz: 640
+  batch: 8
+  patience: 30
+  workers: 8
+  device: 1
+  deterministic: true
+  extra:
+    amp: true
+    cache: false
+    save_period: 10
+
+output:
+  project: runs/lat_yolo/visdrone
+  name: yolo26m_p2_tiled_se

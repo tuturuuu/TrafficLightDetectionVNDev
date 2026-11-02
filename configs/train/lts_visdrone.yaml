@@ -1,0 +1,36 @@
+# LAT-YOLO stage 2: jointly optimize the detector and the LTS projection.
+training_mode: joint
+out: runs/lat_yolo/visdrone/lts_joint_se_seed0
+dataset:
+  data_yaml: data/visdrone/data.yaml
+  train_images: data/visdrone/images/train
+  train_labels: data/visdrone/labels/train
+  val_images: data/visdrone/images/val
+  val_labels: data/visdrone/labels/val
+  split_manifest: data/visdrone/split_manifest_lat_v1.json
+detector:
+  weights: runs/lat_yolo/visdrone/yolo26m_p2_tiled_se_seed0/weights/best.pt
+  imgsz: 640
+features:
+  feature_stage: 5 # P3 after SE; 512 channels, LTS has 513 parameters.
+  coarse_imgsz: 640
+tiling:
+  tile_size: 640
+  overlap: 0.2
+  min_visibility: 0.3
+loss: {box: 7.5, cls: 0.5, dfl: 1.5}
+train:
+  seed: 0 # launcher repeats this recipe for seeds 0, 42, 100
+  device: cuda:1
+  epochs: 100
+  batch_size: 8
+  workers: 8
+  lr: 0.001
+  weight_decay: 0.0005
+  lambda_rel: 1.0
+  pos_weight: 1.0
+  threshold: 0.5
+  patience: 20
+  warmup_steps: 100
+  amp: true
+  clip_grad: 10.0

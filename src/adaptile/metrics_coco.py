@@ -28,8 +28,12 @@ def export_coco(predictions, targets, image_shapes):
                 if len(row) != (5 if is_gt else 6) or not np.isfinite(row).all():
                     raise ValueError("Expected finite original-image xyxy boxes with class/score")
                 x1, y1, x2, y2 = map(float, row[:4])
-                if x2 <= x1 or y2 <= y1:
-                    raise ValueError("Boxes must have positive area")
+                if x2 < x1 or y2 < y1:
+                    raise ValueError("Boxes must not have negative extents")
+                if is_gt and (x2 == x1 or y2 == y1):
+                    raise ValueError("Ground-truth boxes must have positive area")
+                # Keep zero-area predictions: official COCO counts them as
+                # unmatched false positives within its area/maxDets filters.
                 entry = {"image_id": image_id, "category_id": int(row[-1]),
                          "bbox": [x1, y1, x2 - x1, y2 - y1]}
                 if is_gt:

@@ -1,0 +1,44 @@
+# Evaluate the matched joint detector/LTS pair on the full validation split.
+# The launcher supplies both weights and sweeps thresholds 0.3 and 0.5.
+dataset:
+  name: visdrone
+  data_yaml: data/visdrone/data.yaml
+  images: data/visdrone/images/val
+  labels: data/visdrone/labels/val
+  split_manifest: data/visdrone/split_manifest_lat_v1.json
+tiling: {type: uniform, tile_size: 640, overlap: 0.2, pad: false}
+tile_selector:
+  type: [none, lts]
+  lts:
+    weights: ???
+    feature_stage: 5
+    coarse_imgsz: 640
+    threshold: 0.5
+    min_keep: 0
+    force_keep_all: false
+detector:
+  type: yolo
+  weights: ???
+  conf: 0.001
+  imgsz: 640
+  batch: 8
+  device: cuda:1
+  iou: 0.7
+  max_det: 300
+  half: false
+merger: {type: nms, iou_thr: 0.5, max_det: 300}
+eval:
+  experiment_id: visdrone_lts_se_validation
+  protocol: lat_yolo_v1
+  metric_backend: coco
+  coco_max_dets: 100
+  metrics: [map50, map50_95, ap_small, precision, recall, f1, fps]
+  n_warmup: 3
+  warmup_mode: full
+  profile_stages: false
+  export_predictions: true
+  visualize: 0
+  coverage_visibility: 0.5
+  max_images: null
+  seed: 0
+  out: outputs/lat_yolo/visdrone/val_seed0.json
